@@ -403,6 +403,67 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // --- REVIEWS: Get Single Review & Book Details ---
+      const singleReviewMatch = pathname.match(/^\/api\/reviews\/([^/]+)$/);
+      if (singleReviewMatch && method === 'GET') {
+        const reviewId = singleReviewMatch[1];
+        const row = db.prepare(`
+          SELECT 
+            r.id, r.user_id, r.book_title, r.book_author, r.cover_url, r.genre, 
+            r.rating, r.review_text, r.quote, r.book_link, r.created_at,
+            u.name as author_name, u.handle as author_handle, u.avatar as author_avatar
+          FROM reviews r
+          JOIN users u ON u.id = r.user_id
+          WHERE r.id = ?
+        `).get(reviewId);
+
+        if (!row) return sendError(res, 404, 'Review not found');
+
+        const likes = db.prepare('SELECT user_id FROM likes WHERE review_id = ?').all(reviewId).map(l => l.user_id);
+        const comments = db.prepare(`
+          SELECT c.id, c.user_id, c.text, c.created_at, u.name, u.avatar
+          FROM comments c
+          JOIN users u ON u.id = c.user_id
+          WHERE c.review_id = ?
+          ORDER BY c.created_at ASC
+        `).all(reviewId);
+
+        const currentUserId = user ? user.id : null;
+        const isFollowing = (currentUserId && currentUserId !== row.user_id)
+          ? !!db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(currentUserId, row.user_id)
+          : false;
+
+        const isSaved = currentUserId
+          ? !!db.prepare('SELECT 1 FROM saves WHERE user_id = ? AND review_id = ?').get(currentUserId, reviewId)
+          : false;
+
+        return sendJson(res, 200, {
+          success: true,
+          review: {
+            id: row.id,
+            bookTitle: row.book_title,
+            bookAuthor: row.book_author,
+            coverUrl: row.cover_url,
+            genre: row.genre,
+            rating: row.rating,
+            reviewText: row.review_text,
+            quote: row.quote,
+            bookLink: row.book_link,
+            createdAt: row.created_at,
+            author: {
+              id: row.user_id,
+              name: row.author_name,
+              handle: row.author_handle,
+              avatar: row.author_avatar,
+              isFollowing
+            },
+            likes,
+            comments,
+            isSaved
+          }
+        });
+      }
+
       // --- REVIEWS: Delete Review ---
       const deleteReviewMatch = pathname.match(/^\/api\/reviews\/([^/]+)$/);
       if (deleteReviewMatch && method === 'DELETE') {
@@ -554,15 +615,19 @@ const server = http.createServer(async (req, res) => {
           ORDER BY created_at DESC
         `).all(targetId);
 
-        const likedReviews = db.prepare(`
-          SELECT r.id, r.book_title, r.book_author, r.cover_url, r.genre, r.rating, r.book_link, r.created_at,
-            (SELECT COUNT(*) FROM likes WHERE review_id = r.id) as likes_count,
-            (SELECT COUNT(*) FROM comments WHERE review_id = r.id) as comments_count
-          FROM reviews r
-          JOIN likes l ON l.review_id = r.id
-          WHERE l.user_id = ?
-          ORDER BY l.created_at DESC
-        `).all(targetId);
+        let likedReviews = [];
+        // Privacy: only the account owner can view their private Favorites & Likes
+        if (user && user.id === targetId) {
+          likedReviews = db.prepare(`
+            SELECT r.id, r.book_title, r.book_author, r.cover_url, r.genre, r.rating, r.book_link, r.created_at,
+              (SELECT COUNT(*) FROM likes WHERE review_id = r.id) as likes_count,
+              (SELECT COUNT(*) FROM comments WHERE review_id = r.id) as comments_count
+            FROM reviews r
+            JOIN likes l ON l.review_id = r.id
+            WHERE l.user_id = ?
+            ORDER BY l.created_at DESC
+          `).all(targetId);
+        }
 
         return sendJson(res, 200, {
           success: true,

@@ -1154,14 +1154,23 @@ export const app = {
         `;
       }
 
-      // Tab switcher styles
+      // Tab switcher styles with privacy enforcement
       const btnRev = document.getElementById('pTabReviews');
       const btnLike = document.getElementById('pTabLiked');
+
+      if (!isMe) {
+        // Privacy: Other visitors cannot see someone's private Favorites & Likes
+        if (btnLike) btnLike.classList.add('hidden');
+        tab = 'reviews';
+      } else {
+        if (btnLike) btnLike.classList.remove('hidden');
+      }
+
       if (tab === 'reviews') {
         btnRev.className = "pb-3 border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 font-bold";
-        btnLike.className = "pb-3 border-b-2 border-transparent text-stone-600 dark:text-stone-400 font-semibold hover:text-stone-900";
+        if (btnLike) btnLike.className = "pb-3 border-b-2 border-transparent text-stone-600 dark:text-stone-400 font-semibold hover:text-stone-900";
       } else {
-        btnLike.className = "pb-3 border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 font-bold";
+        if (btnLike) btnLike.className = "pb-3 border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 font-bold";
         btnRev.className = "pb-3 border-b-2 border-transparent text-stone-600 dark:text-stone-400 font-semibold hover:text-stone-900";
       }
 
@@ -1178,22 +1187,37 @@ export const app = {
         `;
       } else {
         postsContainer.innerHTML = displayList.map(post => `
-          <div class="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex gap-4 items-center">
-            <img src="${post.cover_url}" class="w-12 h-16 object-cover rounded-lg shadow shrink-0" alt="Cover">
+          <div 
+            onclick="app.openBookDetails('${post.id}')"
+            class="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 flex gap-4 items-center cursor-pointer hover:border-brand-500/60 hover:bg-stone-100/90 dark:hover:bg-stone-800/80 transition group shadow-sm"
+            title="Click to view book details & complete review"
+          >
+            <img 
+              src="${post.cover_url}" 
+              class="w-12 h-16 object-cover rounded-lg shadow shrink-0 group-hover:scale-105 transition-transform" 
+              alt="Cover"
+              onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600'"
+            />
             <div class="min-w-0 flex-1">
-              <h4 class="font-serif-title font-bold text-sm text-stone-900 dark:text-stone-100 truncate">${post.book_title}</h4>
+              <h4 class="font-serif-title font-bold text-sm text-stone-900 dark:text-stone-100 truncate group-hover:text-brand-600 transition-colors">${post.book_title}</h4>
               <p class="text-xs text-stone-600 dark:text-stone-400 truncate">by ${post.book_author}</p>
-              <div class="flex items-center gap-3 mt-1 text-[11px] text-stone-600 dark:text-stone-400">
-                <span class="text-amber-500 font-bold"><i class="fa-solid fa-star text-[10px]"></i> ${post.rating}</span>
-                <span><i class="fa-solid fa-heart text-[10px] text-rose-500"></i> ${post.likes_count || 0}</span>
-                <span><i class="fa-solid fa-comment text-[10px]"></i> ${post.comments_count || 0}</span>
+              <div class="flex items-center gap-3 mt-1.5 text-[11px] text-stone-600 dark:text-stone-400">
+                <span class="text-amber-500 font-bold flex items-center gap-1"><i class="fa-solid fa-star text-[10px]"></i> ${post.rating}</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-heart text-[10px] text-rose-500"></i> ${post.likes_count || 0}</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-comment text-[10px]"></i> ${post.comments_count || 0}</span>
               </div>
             </div>
-            ${post.book_link ? `
-              <a href="${post.book_link}" target="_blank" rel="noopener noreferrer" class="text-stone-400 hover:text-brand-500 p-2 text-xs" title="Open Link">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-              </a>
-            ` : ''}
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                <span>Details</span>
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+              </span>
+              ${post.book_link ? `
+                <a href="${post.book_link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-stone-400 hover:text-brand-500 p-2 text-xs rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition" title="Open Link">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+              ` : ''}
+            </div>
           </div>
         `).join('');
       }
@@ -1205,7 +1229,326 @@ export const app = {
 
   switchProfileTab(tab) {
     if (this.state.viewingProfileId) {
+      const isMe = this.state.currentUser && this.state.currentUser.id === this.state.viewingProfileId;
+      if (!isMe && tab === 'liked') tab = 'reviews';
       this.renderProfileModal(this.state.viewingProfileId, tab);
+    }
+  },
+
+  // ==========================================
+  // BOOK & REVIEW DETAILS MODAL
+  // ==========================================
+  async openBookDetails(reviewId) {
+    const modal = document.getElementById('bookDetailsModal');
+    const body = document.getElementById('bookModalBody');
+    const headerTitle = document.getElementById('bookModalHeaderTitle');
+    const headerSubtitle = document.getElementById('bookModalHeaderSubtitle');
+
+    if (!modal || !body) return;
+
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+
+    // Show loading skeleton while fetching
+    body.innerHTML = `
+      <div class="flex flex-col sm:flex-row gap-5 items-start animate-pulse">
+        <div class="w-36 sm:w-44 h-56 rounded-xl bg-stone-200 dark:bg-stone-800 shrink-0 mx-auto sm:mx-0"></div>
+        <div class="flex-1 space-y-3 w-full">
+          <div class="h-6 w-3/4 bg-stone-200 dark:bg-stone-800 rounded"></div>
+          <div class="h-4 w-1/2 bg-stone-200 dark:bg-stone-800 rounded"></div>
+          <div class="h-4 w-1/3 bg-stone-200 dark:bg-stone-800 rounded"></div>
+          <div class="h-24 w-full bg-stone-200 dark:bg-stone-800 rounded-xl mt-4"></div>
+        </div>
+      </div>
+    `;
+
+    try {
+      // First check local state for instant cached data
+      let post = this.state.reviews ? this.state.reviews.find(r => r.id === reviewId) : null;
+
+      // Fetch fresh full review data from backend
+      const headers = {};
+      if (this.state.authToken) headers['Authorization'] = `Bearer ${this.state.authToken}`;
+      const res = await fetch(`/api/reviews/${reviewId}`, { headers });
+      const data = await res.json();
+      if (data.success && data.review) {
+        post = data.review;
+      }
+
+      if (!post) {
+        body.innerHTML = `
+          <div class="py-12 text-center text-stone-500">
+            <i class="fa-solid fa-triangle-exclamation text-3xl mb-3 text-amber-500 block"></i>
+            <p class="font-bold">Book review not found.</p>
+            <button onclick="app.closeBookDetailsModal()" class="mt-4 px-4 py-2 bg-stone-200 dark:bg-stone-800 rounded-full text-xs font-semibold">Close</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (headerTitle) headerTitle.textContent = post.bookTitle;
+      if (headerSubtitle) headerSubtitle.textContent = `by ${post.bookAuthor} · ${post.genre || 'Literature'}`;
+
+      const rating = Number(post.rating) || 5;
+      const fullStars = Math.floor(rating);
+      const halfStar = rating % 1 >= 0.5;
+      let starHTML = '';
+      for (let i = 0; i < fullStars; i++) starHTML += '<i class="fa-solid fa-star text-amber-500 text-sm"></i>';
+      if (halfStar) starHTML += '<i class="fa-solid fa-star-half-stroke text-amber-500 text-sm"></i>';
+      const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+      for (let i = 0; i < emptyStars; i++) starHTML += '<i class="fa-regular fa-star text-stone-300 dark:text-stone-600 text-sm"></i>';
+
+      const currentUserId = this.state.currentUser ? this.state.currentUser.id : null;
+      const likesList = post.likes || [];
+      const isLiked = currentUserId ? likesList.includes(currentUserId) : false;
+      const isSaved = (this.state.currentUser && this.state.currentUser.savedReviewIds)
+        ? this.state.currentUser.savedReviewIds.includes(post.id)
+        : (post.isSaved || false);
+      const commentsList = post.comments || [];
+
+      body.innerHTML = `
+        <!-- Book Core Information -->
+        <div class="flex flex-col sm:flex-row gap-6 items-start">
+          <!-- Book Cover -->
+          <div class="w-full sm:w-44 shrink-0 flex flex-col items-center">
+            <div class="relative w-36 sm:w-full aspect-[2/3] rounded-2xl overflow-hidden book-shadow border border-stone-200 dark:border-stone-700 bg-stone-200 dark:bg-stone-800">
+              <img 
+                src="${post.coverUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600'}" 
+                alt="${post.bookTitle} Cover" 
+                class="w-full h-full object-cover"
+                onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600'"
+              />
+            </div>
+            ${post.bookLink ? `
+              <a 
+                href="${post.bookLink}" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="mt-3.5 w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 transition shadow-sm"
+              >
+                <i class="fa-solid fa-cart-shopping text-xs"></i>
+                <span>Get / Read Book</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+              </a>
+            ` : ''}
+          </div>
+
+          <!-- Book & Review Info -->
+          <div class="flex-1 space-y-4 min-w-0">
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-900/60">
+                  ${post.genre || 'General Literature'}
+                </span>
+                <span class="text-[11px] text-stone-500 dark:text-stone-400">
+                  Reviewed ${this.formatTime(post.createdAt)}
+                </span>
+              </div>
+              <h3 class="font-serif-title text-2xl font-bold text-stone-900 dark:text-stone-100 leading-tight">
+                ${post.bookTitle}
+              </h3>
+              <p class="text-sm font-medium text-stone-600 dark:text-stone-400 mt-1">
+                by <span class="text-stone-800 dark:text-stone-200 font-semibold">${post.bookAuthor}</span>
+              </p>
+            </div>
+
+            <!-- Star Rating -->
+            <div class="flex items-center gap-2 p-2.5 rounded-xl bg-stone-50 dark:bg-stone-900/70 border border-stone-200 dark:border-stone-800">
+              <div class="flex items-center gap-1">${starHTML}</div>
+              <span class="text-sm font-bold text-stone-800 dark:text-stone-100">${rating.toFixed(1)}</span>
+              <span class="text-xs text-stone-500">/ 5.0 Star Rating</span>
+            </div>
+
+            <!-- Reviewer Profile Card -->
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-stone-50 dark:bg-stone-900/70 border border-stone-200 dark:border-stone-800">
+              <div class="flex items-center gap-3 cursor-pointer" onclick="app.closeBookDetailsModal(); app.openProfile('${post.author.id}')">
+                <img src="${post.author.avatar}" class="w-10 h-10 rounded-full object-cover border-2 border-brand-500" alt="${post.author.name}">
+                <div>
+                  <h4 class="font-bold text-xs sm:text-sm text-stone-900 dark:text-stone-100 hover:underline flex items-center gap-1.5">
+                    ${post.author.name}
+                    <i class="fa-solid fa-circle-check text-brand-500 text-[10px]"></i>
+                  </h4>
+                  <p class="text-[11px] text-stone-500 dark:text-stone-400">${post.author.handle}</p>
+                </div>
+              </div>
+              <button 
+                onclick="app.closeBookDetailsModal(); app.openProfile('${post.author.id}')"
+                class="px-3 py-1 text-xs font-semibold rounded-full border border-stone-300 dark:border-stone-700 hover:border-brand-500 text-stone-700 dark:text-stone-200 hover:text-brand-600 transition"
+              >
+                View Shelf
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memorable Quote -->
+        ${post.quote ? `
+          <div class="p-4 rounded-2xl bg-brand-50/50 dark:bg-brand-950/20 border-l-4 border-brand-500 text-xs sm:text-sm italic text-stone-800 dark:text-stone-200 font-serif leading-relaxed">
+            ${post.quote}
+          </div>
+        ` : ''}
+
+        <!-- Full Review Text -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            Full Literary Review
+          </h4>
+          <div class="p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800">
+            <p class="text-xs sm:text-sm text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">
+              ${post.reviewText}
+            </p>
+          </div>
+        </div>
+
+        <!-- Social Interactions Bar -->
+        <div class="flex items-center justify-between p-3.5 rounded-2xl bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-xs">
+          <div class="flex items-center gap-4">
+            <button 
+              onclick="app.toggleLike('${post.id}'); app.openBookDetails('${post.id}');"
+              class="flex items-center gap-1.5 font-bold transition transform active:scale-125 ${isLiked ? 'text-rose-500' : 'text-stone-600 dark:text-stone-400 hover:text-rose-500'}"
+            >
+              <i class="fa-heart text-base ${isLiked ? 'fa-solid' : 'fa-regular'}"></i>
+              <span>${likesList.length} Likes</span>
+            </button>
+            <span class="text-stone-600 dark:text-stone-400 font-semibold flex items-center gap-1.5">
+              <i class="fa-regular fa-comment text-base"></i>
+              <span>${commentsList.length} Comments</span>
+            </span>
+            <button 
+              onclick="app.sharePost('${post.id}')"
+              class="text-stone-600 dark:text-stone-400 hover:text-brand-500 font-semibold flex items-center gap-1.5 transition"
+              title="Copy link"
+            >
+              <i class="fa-regular fa-paper-plane text-base"></i>
+              <span>Share</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button 
+              onclick="app.toggleSavePost('${post.id}'); app.openBookDetails('${post.id}');"
+              class="flex items-center gap-1 font-semibold text-stone-600 dark:text-stone-400 hover:text-brand-600 transition"
+              title="Save book"
+            >
+              <i class="fa-bookmark text-base ${isSaved ? 'fa-solid text-brand-600' : 'fa-regular'}"></i>
+              <span>${isSaved ? 'Saved' : 'Save'}</span>
+            </button>
+            <button 
+              onclick="app.scrollToPostInFeed('${post.id}')"
+              class="px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition shadow-sm"
+              title="Jump to post in feed"
+            >
+              Feed View
+            </button>
+          </div>
+        </div>
+
+        <!-- Discussion / Comments -->
+        <div class="space-y-3 pt-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            Community Discussion (${commentsList.length})
+          </h4>
+          <div class="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+            ${commentsList.length === 0 ? `
+              <p class="text-xs text-stone-500 italic p-3 rounded-xl bg-stone-50 dark:bg-stone-900/60">No comments yet. Be the first to share your perspective!</p>
+            ` : commentsList.map(c => `
+              <div class="flex items-start gap-2.5 p-2.5 rounded-xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-xs">
+                <img src="${c.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'}" class="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" alt="${c.name}">
+                <div class="min-w-0 flex-1 leading-tight">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-bold text-stone-900 dark:text-stone-100 cursor-pointer hover:underline" onclick="app.closeBookDetailsModal(); app.openProfile('${c.user_id}')">
+                      ${c.name}
+                    </span>
+                    <span class="text-[10px] text-stone-500">${this.formatTime(c.created_at)}</span>
+                  </div>
+                  <p class="text-stone-700 dark:text-stone-300 mt-1">${c.text}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Add Comment Input -->
+          <form onsubmit="app.handleAddModalComment(event, '${post.id}')" class="flex gap-2 items-center pt-1">
+            <img src="${this.state.currentUser ? this.state.currentUser.avatar : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'}" class="w-7 h-7 rounded-full object-cover shrink-0" alt="Me">
+            <div class="flex-1 relative">
+              <input 
+                type="text" 
+                id="modalCommentInput-${post.id}" 
+                placeholder="Share your thought on this book..." 
+                class="w-full pl-3.5 pr-10 py-2 text-xs rounded-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 focus:border-brand-500 focus:outline-none transition"
+              />
+              <button 
+                type="submit" 
+                class="absolute right-1.5 top-1 w-7 h-7 rounded-full text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950 flex items-center justify-center transition"
+                title="Send"
+              >
+                <i class="fa-solid fa-arrow-up text-xs"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+      `;
+
+    } catch (err) {
+      console.error('Error fetching book details:', err);
+      body.innerHTML = `
+        <div class="py-12 text-center text-rose-500">
+          <p>Failed to load book details. Please try again.</p>
+        </div>
+      `;
+    }
+  },
+
+  closeBookDetailsModal() {
+    const modal = document.getElementById('bookDetailsModal');
+    if (modal) modal.classList.add('hidden');
+    const profileModal = document.getElementById('profileModal');
+    if (!profileModal || profileModal.classList.contains('hidden')) {
+      document.body.classList.remove('overflow-hidden');
+    }
+  },
+
+  scrollToPostInFeed(postId) {
+    this.closeBookDetailsModal();
+    this.closeProfileModal();
+    const el = document.getElementById(`review-card-${postId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-4', 'ring-brand-500/50');
+      setTimeout(() => el.classList.remove('ring-4', 'ring-brand-500/50'), 2500);
+    }
+  },
+
+  async handleAddModalComment(e, reviewId) {
+    e.preventDefault();
+    const input = document.getElementById(`modalCommentInput-${reviewId}`);
+    const text = input ? input.value.trim() : '';
+    if (!text) return;
+
+    if (!this.state.currentUser) {
+      this.openAuthModal('login');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/reviews/${reviewId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.state.authToken}`
+        },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.success) {
+        input.value = '';
+        await this.fetchReviews();
+        await this.openBookDetails(reviewId);
+      } else {
+        this.toast(data.message || 'Failed to post comment', 'error');
+      }
+    } catch {
+      this.toast('Offline comment failed', 'error');
     }
   },
 

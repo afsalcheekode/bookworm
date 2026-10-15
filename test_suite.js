@@ -239,6 +239,37 @@ async function runTests() {
     'Book of the Week: Dynamic calculation by engagement score (likes + comments + rating) returns top book'
   );
 
+  // 15. Single Review & Book Details API
+  const singleRev = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/reviews/rev_1',
+    method: 'GET'
+  });
+  assert(
+    singleRev.statusCode === 200 &&
+    singleRev.body.review &&
+    singleRev.body.review.bookTitle === 'Dune' &&
+    singleRev.body.review.author &&
+    Array.isArray(singleRev.body.review.comments),
+    'Reviews: GET /api/reviews/:id returns comprehensive book & review details'
+  );
+
+  // 16. Profile Privacy: Others cannot see someone else's favorites & likes
+  const otherProfile = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/users/user_clara',
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` } // logged in as Elena
+  });
+  assert(
+    otherProfile.statusCode === 200 &&
+    Array.isArray(otherProfile.body.user.likedReviews) &&
+    otherProfile.body.user.likedReviews.length === 0,
+    'Privacy: Visitors cannot view another user private favorites & likes'
+  );
+
   console.log(`\n=========================================`);
   console.log(`   TEST RESULTS: ${passed} / ${total} PASSED`);
   console.log(`=========================================\n`);

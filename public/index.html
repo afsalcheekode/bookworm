@@ -641,6 +641,33 @@
     </div>
   </div>
 
+  <!-- 2.2 BOOK & REVIEW DETAILS MODAL -->
+  <div id="bookDetailsModal" class="fixed inset-0 z-[60] hidden bg-black/65 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white dark:bg-[#161922] w-full max-w-2xl rounded-3xl border border-stone-200 dark:border-stone-800 overflow-hidden shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Top Header -->
+      <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 dark:border-stone-800 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-book-open text-sm"></i>
+          </div>
+          <div class="min-w-0">
+            <h2 id="bookModalHeaderTitle" class="font-serif-title font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 truncate">Book Details</h2>
+            <p id="bookModalHeaderSubtitle" class="text-xs text-stone-500 dark:text-stone-400 truncate">Reader review & book overview</p>
+          </div>
+        </div>
+        <button onclick="app.closeBookDetailsModal()" class="w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-600 flex items-center justify-center transition" title="Close">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Modal Content -->
+      <div id="bookModalBody" class="overflow-y-auto p-5 sm:p-6 space-y-6 flex-1">
+        <!-- Rendered dynamically by app.openBookDetails(reviewId) -->
+      </div>
+    </div>
+  </div>
+
   <!-- 2.5 EDIT PROFILE MODAL -->
   <div id="editProfileModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6">
     <div class="bg-white dark:bg-[#161922] w-full max-w-lg rounded-3xl border border-stone-200 dark:border-stone-800 overflow-hidden shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-150">
