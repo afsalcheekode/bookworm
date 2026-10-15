@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bgOwl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ede9fe" />
+      <stop offset="100%" stop-color="#c4b5fd" />
+    </linearGradient>
+    <linearGradient id="owlBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a8824f" />
+      <stop offset="100%" stop-color="#785028" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="100" cy="100" r="96" fill="url(#bgOwl)" stroke="#7c3aed" stroke-width="4"/>
+
+  <!-- Magic Sparkles -->
+  <path d="M 38 42 L 40 34 L 42 42 L 50 44 L 42 46 L 40 54 L 38 46 L 30 44 Z" fill="#fbbf24"/>
+  <path d="M 160 52 L 162 46 L 164 52 L 170 54 L 164 56 L 162 62 L 160 56 L 154 54 Z" fill="#fbbf24"/>
+
+  <!-- Owl Ear Tufts -->
+  <polygon points="60,65 52,30 80,55" fill="#785028"/>
+  <polygon points="140,65 148,30 120,55" fill="#785028"/>
+
+  <!-- Owl Body -->
+  <ellipse cx="100" cy="98" rx="46" ry="48" fill="url(#owlBody)"/>
+
+  <!-- Belly Feathers -->
+  <ellipse cx="100" cy="110" rx="30" ry="32" fill="#fef3c7"/>
+  <path d="M 90 98 Q 95 102 100 98 Q 105 102 110 98" stroke="#d97706" stroke-width="2" fill="none"/>
+  <path d="M 86 108 Q 93 113 100 108 Q 107 113 114 108" stroke="#d97706" stroke-width="2" fill="none"/>
+  <path d="M 90 118 Q 95 122 100 118 Q 105 122 110 118" stroke="#d97706" stroke-width="2" fill="none"/>
+
+  <!-- Eye Patches -->
+  <circle cx="78" cy="76" r="22" fill="#ffffff" stroke="#785028" stroke-width="2"/>
+  <circle cx="122" cy="76" r="22" fill="#ffffff" stroke="#785028" stroke-width="2"/>
+
+  <!-- Round Golden Spectacles -->
+  <circle cx="78" cy="76" r="18" fill="none" stroke="#d97706" stroke-width="3"/>
+  <circle cx="122" cy="76" r="18" fill="none" stroke="#d97706" stroke-width="3"/>
+  <line x1="96" y1="76" x2="104" y2="76" stroke="#d97706" stroke-width="3"/>
+
+  <!-- Big Curious Pupils -->
+  <circle cx="80" cy="76" r="10" fill="#0f172a"/>
+  <circle cx="83" cy="72" r="3.5" fill="#ffffff"/>
+  <circle cx="120" cy="76" r="10" fill="#0f172a"/>
+  <circle cx="123" cy="72" r="3.5" fill="#ffffff"/>
+
+  <!-- Beak -->
+  <polygon points="95,85 105,85 100,98" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/>
+
+  <!-- Scholar Mortarboard Cap -->
+  <polygon points="100,22 142,34 100,46 58,34" fill="#1e1b4b" stroke="#312e81" stroke-width="1.5"/>
+  <rect x="85" y="42" width="30" height="10" rx="3" fill="#312e81"/>
+  <!-- Tassel -->
+  <line x1="100" y1="34" x2="135" y2="44" stroke="#eab308" stroke-width="2"/>
+  <circle cx="135" cy="48" r="3.5" fill="#eab308"/>
+
+  <!-- Open Magic Tome / Book at bottom -->
+  <path d="M 100 148 L 44 135 Q 40 162 44 178 L 100 184 Z" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+  <path d="M 100 148 L 156 135 Q 160 162 156 178 L 100 184 Z" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+  <path d="M 40 135 L 100 149 L 160 135 L 158 180 L 100 187 L 42 180 Z" fill="none" stroke="#7c2d12" stroke-width="4.5" stroke-linejoin="round"/>
+
+  <!-- Owl Talons clutching book spine -->
+  <circle cx="86" cy="150" r="4" fill="#f59e0b"/>
+  <circle cx="94" cy="151" r="4" fill="#f59e0b"/>
+  <circle cx="106" cy="151" r="4" fill="#f59e0b"/>
+  <circle cx="114" cy="150" r="4" fill="#f59e0b"/>
+
+  <!-- Mysterious Runes on page -->
+  <line x1="56" y1="148" x2="84" y2="153" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+  <line x1="56" y1="158" x2="82" y2="163" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+  <line x1="116" y1="153" x2="144" y2="148" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+  <line x1="118" y1="163" x2="142" y2="158" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bgCat" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bae6fd" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+    <linearGradient id="catFur" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdba74" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="100" cy="100" r="96" fill="url(#bgCat)" stroke="#0284c7" stroke-width="4"/>
+
+  <!-- Cat Ears -->
+  <polygon points="62,60 74,20 95,50" fill="url(#catFur)" stroke="#c2410c" stroke-width="2"/>
+  <polygon points="66,54 75,27 89,47" fill="#fecdd3"/>
+  <polygon points="138,60 126,20 105,50" fill="url(#catFur)" stroke="#c2410c" stroke-width="2"/>
+  <polygon points="134,54 125,27 111,47" fill="#fecdd3"/>
+
+  <!-- Cat Head -->
+  <ellipse cx="100" cy="78" rx="42" ry="36" fill="url(#catFur)" stroke="#c2410c" stroke-width="2.5"/>
+
+  <!-- Cat Forehead Stripes -->
+  <path d="M 94 48 L 96 60 M 100 46 L 100 62 M 106 48 L 104 60" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- White Muzzle -->
+  <ellipse cx="100" cy="88" rx="18" ry="13" fill="#ffffff"/>
+
+  <!-- Cheerful closed happy eyes -->
+  <path d="M 76 74 Q 84 66 92 74" stroke="#0f172a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M 108 74 Q 116 66 124 74" stroke="#0f172a" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- Round spectacles -->
+  <circle cx="84" cy="73" r="13" fill="none" stroke="#78350f" stroke-width="2.5"/>
+  <circle cx="116" cy="73" r="13" fill="none" stroke="#78350f" stroke-width="2.5"/>
+  <line x1="97" y1="73" x2="103" y2="73" stroke="#78350f" stroke-width="2.5"/>
+
+  <!-- Tiny Pink Nose & Mouth -->
+  <polygon points="97,84 103,84 100,88" fill="#f43f5e"/>
+  <path d="M 100 88 Q 96 95 91 92 M 100 88 Q 104 95 109 92" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Whiskers -->
+  <line x1="72" y1="84" x2="52" y2="82" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="72" y1="89" x2="54" y2="92" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="128" y1="84" x2="148" y2="82" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="128" y1="89" x2="146" y2="92" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Cozy Scarf -->
+  <path d="M 70 102 C 85 96, 115 96, 130 102 C 135 112, 65 112, 70 102 Z" fill="#8b5cf6" stroke="#6d28d9" stroke-width="2"/>
+  <rect x="74" y="104" width="16" height="28" rx="4" fill="#a78bfa" stroke="#6d28d9" stroke-width="1.5"/>
+
+  <!-- Open Teal Book -->
+  <path d="M 100 134 L 54 122 Q 52 152 56 174 L 100 180 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <path d="M 100 134 L 146 122 Q 148 152 144 174 L 100 180 Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <path d="M 50 122 L 100 135 L 150 122 L 148 176 L 100 183 L 52 176 Z" fill="none" stroke="#0d9488" stroke-width="4.5" stroke-linejoin="round"/>
+  
+  <!-- Cat Paws holding book -->
+  <circle cx="68" cy="148" r="9" fill="#fed7aa" stroke="#c2410c" stroke-width="2"/>
+  <circle cx="132" cy="148" r="9" fill="#fed7aa" stroke="#c2410c" stroke-width="2"/>
+
+  <!-- Lines on book -->
+  <line x1="66" y1="136" x2="90" y2="141" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="66" y1="146" x2="88" y2="151" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="66" y1="156" x2="91" y2="161" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="110" y1="141" x2="134" y2="136" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="110" y1="151" x2="132" y2="146" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="110" y1="161" x2="134" y2="156" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+</svg>

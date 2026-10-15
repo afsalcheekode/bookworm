@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bgWiz" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="hatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="100" cy="100" r="96" fill="url(#bgWiz)" stroke="#818cf8" stroke-width="4"/>
+
+  <!-- Magic Sparkles Floating -->
+  <path d="M 40 50 L 42 42 L 44 50 L 52 52 L 44 54 L 42 62 L 40 54 L 32 52 Z" fill="#fde047"/>
+  <path d="M 160 60 L 162 54 L 164 60 L 170 62 L 164 64 L 162 70 L 160 64 L 154 62 Z" fill="#67e8f9"/>
+  <circle cx="48" cy="90" r="3" fill="#f472b6"/>
+  <circle cx="152" cy="100" r="3" fill="#fde047"/>
+
+  <!-- Wizard Cloak / Robes -->
+  <path d="M 60 134 C 70 125, 130 125, 140 134 L 154 182 L 46 182 Z" fill="#4338ca" stroke="#312e81" stroke-width="2"/>
+
+  <!-- Fluffy White Beard -->
+  <path d="M 72 96 C 68 135, 132 135, 128 96 C 118 108, 82 108, 72 96 Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+
+  <!-- Head -->
+  <ellipse cx="100" cy="85" rx="32" ry="28" fill="#fef08a"/>
+
+  <!-- Round Spectacles -->
+  <circle cx="84" cy="85" r="12" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+  <circle cx="116" cy="85" r="12" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+  <line x1="96" y1="85" x2="104" y2="85" stroke="#fbbf24" stroke-width="2.5"/>
+
+  <!-- Kind Eyes -->
+  <circle cx="84" cy="85" r="4.5" fill="#0f172a"/>
+  <circle cx="86" cy="83" r="1.5" fill="#ffffff"/>
+  <circle cx="116" cy="85" r="4.5" fill="#0f172a"/>
+  <circle cx="118" cy="83" r="1.5" fill="#ffffff"/>
+
+  <!-- Nose -->
+  <ellipse cx="100" cy="92" rx="4" ry="3" fill="#fde047"/>
+
+  <!-- Wizard Pointed Hat -->
+  <polygon points="100,16 64,68 136,68" fill="url(#hatGrad)" stroke="#3730a3" stroke-width="2"/>
+  <ellipse cx="100" cy="68" rx="48" ry="12" fill="url(#hatGrad)" stroke="#3730a3" stroke-width="2"/>
+  <!-- Gold Hatband -->
+  <path d="M 72 65 C 80 62, 120 62, 128 65 L 126 70 C 120 67, 80 67, 74 70 Z" fill="#fbbf24"/>
+  <!-- Golden Moon on hat -->
+  <path d="M 98 38 A 6 6 0 1 0 106 46 A 8 8 0 1 1 98 38 Z" fill="#fde047"/>
+
+  <!-- Glowing Spellbook / Grimoire -->
+  <!-- Magic Aura behind book -->
+  <ellipse cx="100" cy="155" rx="55" ry="25" fill="#818cf8" opacity="0.35"/>
+  <!-- Open Pages -->
+  <path d="M 100 136 L 50 124 Q 46 154 50 174 L 100 180 Z" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+  <path d="M 100 136 L 150 124 Q 154 154 150 174 L 100 180 Z" fill="#ffffff" stroke="#eab308" stroke-width="2"/>
+  <path d="M 46 124 L 100 137 L 154 124 L 152 176 L 100 183 L 48 176 Z" fill="none" stroke="#7e22ce" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Magic Glowing Sigil in Book -->
+  <polygon points="75,142 81,154 69,154" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+  <polygon points="75,158 81,146 69,146" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+  <line x1="112" y1="144" x2="138" y2="139" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="112" y1="154" x2="136" y2="149" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="112" y1="164" x2="138" y2="159" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+</svg>

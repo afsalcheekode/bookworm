@@ -65,7 +65,7 @@ async function runTests() {
     path: '/api/auth/login',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
-  }, { username: 'elena', password: 'Password123!' });
+  }, { username: 'elena@bookgram.net', password: 'Password123!' });
   assert(login.statusCode === 200 && login.body.token, 'Auth: Login user_elena succeeds with session token');
   const token = login.body.token;
 
@@ -77,7 +77,7 @@ async function runTests() {
     method: 'GET',
     headers: { 'Authorization': `Bearer ${token}` }
   });
-  assert(me.statusCode === 200 && me.body.user.username === 'elena', 'Auth: /api/auth/me returns authenticated user details');
+  assert(me.statusCode === 200 && me.body.user.email === 'elena@bookgram.net', 'Auth: /api/auth/me returns authenticated user details');
 
   // 5. Auth Flow: Register new user
   const testUser = `test_${Date.now()}`;
@@ -162,6 +162,30 @@ async function runTests() {
     validUserUpdate.body.user.username === newUniqueUsername &&
     validUserUpdate.body.user.handle === `@${newUniqueUsername}`,
     'Profile: Successfully changes username and updates handle to new unique value'
+  );
+
+  // 5.4 Profile: User can choose cartoon book-related preset avatar
+  const cartoonAvatarUpdate = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/auth/profile',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${testToken}` }
+  }, {
+    avatar: '/avatars/bookworm-green.svg'
+  });
+  const svgFetch = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/avatars/bookworm-green.svg',
+    method: 'GET'
+  });
+  assert(
+    cartoonAvatarUpdate.statusCode === 200 &&
+    cartoonAvatarUpdate.body.user.avatar === '/avatars/bookworm-green.svg' &&
+    svgFetch.statusCode === 200 &&
+    svgFetch.headers['content-type'].includes('image/svg+xml'),
+    'Profile: Cartoon book preset avatar can be selected and served securely'
   );
 
   // 6. Security Check: Reject weak password

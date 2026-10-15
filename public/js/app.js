@@ -1556,12 +1556,14 @@ export const app = {
   // PROFILE EDITING (NAME, BIO, PHOTO)
   // ==========================================
   presetAvatars: [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=240&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=240&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=240&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=240&auto=format&fit=crop&q=80',
+    '/avatars/bookworm-green.svg',
+    '/avatars/reading-cat.svg',
+    '/avatars/owl-scholar.svg',
+    '/avatars/girl-reader.svg',
+    '/avatars/boy-bookstack.svg',
+    '/avatars/wizard-grimoire.svg',
+    '/avatars/detective-reader.svg',
+    '/avatars/astronaut-reader.svg'
   ],
 
   openEditProfileModal() {
@@ -1613,14 +1615,44 @@ export const app = {
     const grid = document.getElementById('presetAvatarGrid');
     if (!grid) return;
 
-    grid.innerHTML = this.presetAvatars.map((url, i) => `
-      <img 
-        src="${url}" 
-        alt="Preset ${i+1}" 
-        onclick="app.selectPresetAvatar('${url}')"
-        class="w-10 h-10 rounded-full object-cover cursor-pointer border-2 hover:border-brand-500 hover:scale-105 transition shadow-sm ${this.state.tempAvatarData === url ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-stone-200 dark:border-stone-700'}"
-      />
-    `).join('');
+    const titles = [
+      'Bookworm',
+      'Cat Reader',
+      'Wise Owl',
+      'Manga Girl',
+      'Bookstack',
+      'Wizard',
+      'Detective',
+      'Astronaut'
+    ];
+
+    grid.innerHTML = this.presetAvatars.map((url, i) => {
+      const isSelected = this.state.tempAvatarData === url;
+      return `
+        <button 
+          type="button" 
+          onclick="app.selectPresetAvatar('${url}')"
+          class="flex flex-col items-center gap-1.5 p-1 rounded-2xl group transition focus:outline-none ${isSelected ? 'bg-brand-50 dark:bg-brand-950/60' : 'hover:bg-stone-100 dark:hover:bg-stone-800/60'}"
+          title="${titles[i]}"
+        >
+          <div class="relative">
+            <img 
+              src="${url}" 
+              alt="${titles[i]}" 
+              class="w-12 h-12 rounded-full object-cover bg-white dark:bg-stone-800 border-2 group-hover:scale-105 transition-transform shadow-sm ${isSelected ? 'border-brand-500 ring-2 ring-brand-500/50' : 'border-stone-200 dark:border-stone-700'}"
+            />
+            ${isSelected ? `
+              <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-500 text-white flex items-center justify-center text-[9px] shadow">
+                <i class="fa-solid fa-check"></i>
+              </div>
+            ` : ''}
+          </div>
+          <span class="text-[10px] text-stone-600 dark:text-stone-300 font-semibold truncate max-w-[58px] text-center leading-none ${isSelected ? 'text-brand-600 dark:text-brand-400' : ''}">
+            ${titles[i]}
+          </span>
+        </button>
+      `;
+    }).join('');
   },
 
   selectPresetAvatar(url) {
@@ -1628,7 +1660,7 @@ export const app = {
     document.getElementById('editAvatarPreview').src = url;
     document.getElementById('editAvatarUrl').value = '';
     this.renderPresetAvatars();
-    this.toast('Preset photo selected', 'info');
+    this.toast('Literary cartoon avatar selected!', 'info');
   },
 
   selectRandomPresetAvatar() {

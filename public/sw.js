@@ -3,8 +3,8 @@
  * Robust offline-first caching & Progressive Web App resilience
  */
 
-const STATIC_CACHE = 'bookgram-static-v4';
-const DATA_CACHE = 'bookgram-data-v4';
+const STATIC_CACHE = 'bookgram-static-v5';
+const DATA_CACHE = 'bookgram-data-v5';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -17,7 +17,15 @@ const PRECACHE_ASSETS = [
   '/favicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-maskable.png'
+  '/icons/icon-maskable.png',
+  '/avatars/bookworm-green.svg',
+  '/avatars/reading-cat.svg',
+  '/avatars/owl-scholar.svg',
+  '/avatars/girl-reader.svg',
+  '/avatars/boy-bookstack.svg',
+  '/avatars/wizard-grimoire.svg',
+  '/avatars/detective-reader.svg',
+  '/avatars/astronaut-reader.svg'
 ];
 
 // Install: Pre-cache App Shell
