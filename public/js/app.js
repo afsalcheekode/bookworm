@@ -1069,13 +1069,27 @@ export const app = {
       document.getElementById('modalStatFollowers').textContent = user.stats.followersCount || 0;
       document.getElementById('modalStatFollowing').textContent = user.stats.followingCount || 0;
 
+      // Avatar camera edit overlay button toggle
+      const avatarEditBtn = document.getElementById('modalProfileAvatarEditBtn');
+      if (avatarEditBtn) {
+        if (isMe) avatarEditBtn.classList.remove('hidden');
+        else avatarEditBtn.classList.add('hidden');
+      }
+
       // Action button
       const actionBtnContainer = document.getElementById('modalProfileActionBtn');
       if (isMe) {
         actionBtnContainer.innerHTML = `
-          <button onclick="app.closeProfileModal(); app.openCreateModal();" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full text-xs font-bold transition shadow">
-            <i class="fa-solid fa-plus mr-1"></i> New Review
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="app.openEditProfileModal()" class="px-3.5 py-1.5 border border-stone-300 dark:border-stone-700 hover:border-brand-500 text-stone-700 dark:text-stone-200 hover:text-brand-600 rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-pen-to-square text-xs"></i>
+              <span>Edit Profile</span>
+            </button>
+            <button onclick="app.closeProfileModal(); app.openCreateModal();" class="px-4 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-full text-xs font-bold transition shadow flex items-center gap-1.5">
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>New Review</span>
+            </button>
+          </div>
         `;
       } else {
         actionBtnContainer.innerHTML = `
@@ -1144,6 +1158,182 @@ export const app = {
   switchProfileTab(tab) {
     if (this.state.viewingProfileId) {
       this.renderProfileModal(this.state.viewingProfileId, tab);
+    }
+  },
+
+  // ==========================================
+  // PROFILE EDITING (NAME, BIO, PHOTO)
+  // ==========================================
+  presetAvatars: [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=240&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=240&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=240&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=240&auto=format&fit=crop&q=80',
+  ],
+
+  openEditProfileModal() {
+    const u = this.state.currentUser;
+    if (!u) {
+      this.openAuthModal('login');
+      return;
+    }
+
+    const modal = document.getElementById('editProfileModal');
+    if (!modal) return;
+
+    document.getElementById('editProfileName').value = u.name || '';
+    const bio = u.bio || '';
+    document.getElementById('editProfileBio').value = bio;
+    document.getElementById('editBioCharCount').textContent = `${bio.length} / 300`;
+    document.getElementById('editAvatarPreview').src = u.avatar;
+    document.getElementById('editAvatarUrl').value = '';
+    const fileInput = document.getElementById('avatarFileInput');
+    if (fileInput) fileInput.value = '';
+
+    this.state.tempAvatarData = u.avatar;
+    this.renderPresetAvatars();
+
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  },
+
+  closeEditProfileModal() {
+    const modal = document.getElementById('editProfileModal');
+    if (modal) modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    this.state.tempAvatarData = null;
+  },
+
+  renderPresetAvatars() {
+    const grid = document.getElementById('presetAvatarGrid');
+    if (!grid) return;
+
+    grid.innerHTML = this.presetAvatars.map((url, i) => `
+      <img 
+        src="${url}" 
+        alt="Preset ${i+1}" 
+        onclick="app.selectPresetAvatar('${url}')"
+        class="w-10 h-10 rounded-full object-cover cursor-pointer border-2 hover:border-brand-500 hover:scale-105 transition shadow-sm ${this.state.tempAvatarData === url ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-stone-200 dark:border-stone-700'}"
+      />
+    `).join('');
+  },
+
+  selectPresetAvatar(url) {
+    this.state.tempAvatarData = url;
+    document.getElementById('editAvatarPreview').src = url;
+    document.getElementById('editAvatarUrl').value = '';
+    this.renderPresetAvatars();
+    this.toast('Preset photo selected', 'info');
+  },
+
+  selectRandomPresetAvatar() {
+    const random = this.presetAvatars[Math.floor(Math.random() * this.presetAvatars.length)];
+    this.selectPresetAvatar(random);
+  },
+
+  previewAvatarUrl(val) {
+    if (val && val.trim().startsWith('http')) {
+      this.state.tempAvatarData = val.trim();
+      document.getElementById('editAvatarPreview').src = val.trim();
+    }
+  },
+
+  handleAvatarFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.toast('Please choose an image file (PNG, JPG, WebP)', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas to crop & resize to crisp 400x400 avatar (~40KB)
+        const canvas = document.createElement('canvas');
+        const size = 400;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Center crop square
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2;
+        const sy = (img.height - minDim) / 2;
+
+        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        document.getElementById('editAvatarPreview').src = compressedDataUrl;
+        document.getElementById('editAvatarUrl').value = '';
+        this.state.tempAvatarData = compressedDataUrl;
+        this.renderPresetAvatars();
+        this.toast('Photo ready! Click Save Changes.', 'success');
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  async handleSaveProfile(e) {
+    e.preventDefault();
+    const name = document.getElementById('editProfileName').value.trim();
+    const bio = document.getElementById('editProfileBio').value.trim();
+    const urlInput = document.getElementById('editAvatarUrl').value.trim();
+    const avatar = urlInput || this.state.tempAvatarData || (this.state.currentUser && this.state.currentUser.avatar);
+
+    if (!name) {
+      this.toast('Full Name is required', 'error');
+      return;
+    }
+
+    const saveBtn = document.getElementById('btnSaveProfile');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+    }
+
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.state.authToken}`
+        },
+        body: JSON.stringify({ name, bio, avatar })
+      });
+
+      const data = await res.json();
+      if (data.success && data.user) {
+        this.setCurrentUser(data.user);
+        this.closeEditProfileModal();
+
+        // If currently viewing profile modal, update it in place
+        if (this.state.viewingProfileId === data.user.id) {
+          await this.renderProfileModal(data.user.id);
+        }
+
+        // Refresh feed & suggested users so new name & avatar reflect everywhere
+        await Promise.all([
+          this.fetchReviews(),
+          this.fetchSuggestedUsers()
+        ]);
+
+        this.toast('Profile updated successfully!', 'success');
+      } else {
+        this.toast(data.message || 'Error updating profile', 'error');
+      }
+    } catch {
+      this.toast('Network error updating profile', 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Save Changes</span>';
+      }
     }
   },
 

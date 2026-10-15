@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { db, initDatabase } from './lib/db.js';
 import { hashPassword, verifyPassword, createSession, getSessionUser, revokeSession } from './lib/auth.js';
-import { applySecurityHeaders, checkRateLimit, sanitizeText, isSafeUrl } from './lib/security.js';
+import { applySecurityHeaders, checkRateLimit, sanitizeText, isSafeUrl, isSafeImageUrl } from './lib/security.js';
 import { validateRegister, validateLogin, validateReview, validateComment } from './lib/validator.js';
 import { searchBooks } from './lib/bookSearch.js';
 
@@ -33,7 +33,7 @@ const MIME_TYPES = {
 };
 
 // Request Helper: Parse JSON Body
-function parseJsonBody(req, maxSize = 1024 * 1024) {
+function parseJsonBody(req, maxSize = 5 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let raw = '';
     let size = 0;
@@ -242,13 +242,17 @@ const server = http.createServer(async (req, res) => {
         if (!user) return sendError(res, 401, 'Not authenticated');
         const body = await parseJsonBody(req);
         const name = body.name ? sanitizeText(body.name.trim().slice(0, 60)) : user.name;
-        const bio = body.bio ? sanitizeText(body.bio.trim().slice(0, 300)) : user.bio;
-        const avatar = (body.avatar && isSafeUrl(body.avatar.trim())) ? body.avatar.trim() : user.avatar;
+        const bio = body.bio !== undefined ? sanitizeText(body.bio.trim().slice(0, 500)) : user.bio;
+        let avatar = user.avatar;
+        if (body.avatar && typeof body.avatar === 'string' && isSafeImageUrl(body.avatar.trim())) {
+          avatar = body.avatar.trim();
+        }
 
         db.prepare('UPDATE users SET name = ?, bio = ?, avatar = ? WHERE id = ?').run(name, bio, avatar, user.id);
 
         return sendJson(res, 200, {
           success: true,
+          message: 'Profile updated successfully',
           user: { ...user, name, bio, avatar }
         });
       }

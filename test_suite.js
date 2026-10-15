@@ -96,6 +96,25 @@ async function runTests() {
   assert(register.statusCode === 201 && register.body.token, 'Auth: User registration creates account & session');
   const testToken = register.body.token;
 
+  // 5b. Auth Flow: Update Profile (Name, Bio, Photo)
+  const updateProfile = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/auth/profile',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${testToken}` }
+  }, {
+    name: 'Elena Updated',
+    bio: 'Updated bio: Lover of cosmic sci-fi and classic poetry.',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=240'
+  });
+  assert(
+    updateProfile.statusCode === 200 && 
+    updateProfile.body.user.name === 'Elena Updated' && 
+    updateProfile.body.user.bio.includes('Lover of cosmic sci-fi'),
+    'Profile: User can update their display name, bio, and profile photo'
+  );
+
   // 6. Security Check: Reject weak password
   const weakReg = await request({
     host: 'localhost',
