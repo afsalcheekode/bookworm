@@ -115,6 +115,55 @@ async function runTests() {
     'Profile: User can update their display name, bio, and profile photo'
   );
 
+  // 5.1 Profile: Rejects duplicate username
+  const dupUsername = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/auth/profile',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${testToken}` }
+  }, {
+    username: 'marcus' // already taken by Marcus Chen
+  });
+  assert(dupUsername.statusCode === 409, 'Profile: Rejects duplicate username (409 Conflict)');
+
+  // 5.2 Username Availability Check API
+  const takenCheck = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/auth/check-username?username=marcus',
+    method: 'GET'
+  });
+  const availCheck = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/auth/check-username?username=unique_reader_' + Date.now().toString().slice(-4),
+    method: 'GET'
+  });
+  assert(
+    takenCheck.statusCode === 200 && takenCheck.body.available === false &&
+    availCheck.statusCode === 200 && availCheck.body.available === true,
+    'Profile: Username availability endpoint correctly identifies taken vs available usernames'
+  );
+
+  // 5.3 Profile: Successfully updates to a unique username
+  const newUniqueUsername = `reader_${Date.now().toString().slice(-6)}`;
+  const validUserUpdate = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/auth/profile',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${testToken}` }
+  }, {
+    username: newUniqueUsername
+  });
+  assert(
+    validUserUpdate.statusCode === 200 &&
+    validUserUpdate.body.user.username === newUniqueUsername &&
+    validUserUpdate.body.user.handle === `@${newUniqueUsername}`,
+    'Profile: Successfully changes username and updates handle to new unique value'
+  );
+
   // 6. Security Check: Reject weak password
   const weakReg = await request({
     host: 'localhost',

@@ -1583,6 +1583,18 @@ export const app = {
     const fileInput = document.getElementById('avatarFileInput');
     if (fileInput) fileInput.value = '';
 
+    const usernameInput = document.getElementById('editProfileUsername');
+    if (usernameInput) {
+      usernameInput.value = u.username || (u.handle ? u.handle.replace(/^@/, '') : '');
+    }
+    const statusMsg = document.getElementById('usernameStatusMessage');
+    if (statusMsg) {
+      statusMsg.textContent = 'Unique username (3–24 letters, numbers, or underscores).';
+      statusMsg.className = 'text-[11px] text-stone-500 dark:text-stone-400 mt-1';
+    }
+    const statusIcon = document.getElementById('usernameStatusIcon');
+    if (statusIcon) statusIcon.classList.add('hidden');
+
     this.state.tempAvatarData = u.avatar;
     this.renderPresetAvatars();
 
@@ -1670,13 +1682,99 @@ export const app = {
     reader.readAsDataURL(file);
   },
 
+  usernameDebounceTimer: null,
+  handleUsernameInput(val) {
+    clearTimeout(this.usernameDebounceTimer);
+    const clean = (val || '').trim().toLowerCase().replace(/^@/, '');
+    const currentUsername = (this.state.currentUser && this.state.currentUser.username || '').toLowerCase();
+    const statusMsg = document.getElementById('usernameStatusMessage');
+    const statusIcon = document.getElementById('usernameStatusIcon');
+
+    if (!clean) {
+      if (statusMsg) {
+        statusMsg.textContent = 'Username is required.';
+        statusMsg.className = 'text-[11px] text-rose-500 mt-1';
+      }
+      if (statusIcon) statusIcon.classList.add('hidden');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(clean)) {
+      if (statusMsg) {
+        statusMsg.textContent = 'Must be 3–24 letters, numbers, or underscores.';
+        statusMsg.className = 'text-[11px] text-rose-500 mt-1';
+      }
+      if (statusIcon) {
+        statusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-500"></i>';
+        statusIcon.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (clean === currentUsername) {
+      if (statusMsg) {
+        statusMsg.textContent = `Your current username (@${clean}).`;
+        statusMsg.className = 'text-[11px] text-stone-500 dark:text-stone-400 mt-1';
+      }
+      if (statusIcon) {
+        statusIcon.innerHTML = '<i class="fa-solid fa-circle-check text-stone-400"></i>';
+        statusIcon.classList.remove('hidden');
+      }
+      return;
+    }
+
+    // Show checking spinner
+    if (statusIcon) {
+      statusIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-stone-400"></i>';
+      statusIcon.classList.remove('hidden');
+    }
+
+    this.usernameDebounceTimer = setTimeout(async () => {
+      try {
+        const headers = {};
+        if (this.state.authToken) headers['Authorization'] = `Bearer ${this.state.authToken}`;
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(clean)}`, { headers });
+        const data = await res.json();
+        if (data.available) {
+          if (statusMsg) {
+            statusMsg.textContent = `@${clean} is available!`;
+            statusMsg.className = 'text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1';
+          }
+          if (statusIcon) {
+            statusIcon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+          }
+        } else {
+          if (statusMsg) {
+            statusMsg.textContent = `@${clean} is already taken. Please pick another.`;
+            statusMsg.className = 'text-[11px] text-rose-500 font-semibold mt-1';
+          }
+          if (statusIcon) {
+            statusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-500"></i>';
+          }
+        }
+      } catch {
+        if (statusIcon) statusIcon.classList.add('hidden');
+      }
+    }, 280);
+  },
+
   async handleSaveProfile(e) {
     e.preventDefault();
+    const usernameInput = document.getElementById('editProfileUsername');
+    const username = usernameInput ? usernameInput.value.trim().toLowerCase().replace(/^@/, '') : '';
     const name = document.getElementById('editProfileName').value.trim();
     const bio = document.getElementById('editProfileBio').value.trim();
     const urlInput = document.getElementById('editAvatarUrl').value.trim();
     const avatar = urlInput || this.state.tempAvatarData || (this.state.currentUser && this.state.currentUser.avatar);
 
+    if (!username) {
+      this.toast('Username is required', 'error');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+      this.toast('Username must be 3-24 alphanumeric characters or underscores', 'error');
+      return;
+    }
     if (!name) {
       this.toast('Full Name is required', 'error');
       return;
@@ -1695,7 +1793,7 @@ export const app = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.state.authToken}`
         },
-        body: JSON.stringify({ name, bio, avatar })
+        body: JSON.stringify({ username, name, bio, avatar })
       });
 
       const data = await res.json();

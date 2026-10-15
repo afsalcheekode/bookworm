@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { db, initDatabase } from './lib/db.js';
 import { hashPassword, verifyPassword, createSession, getSessionUser, revokeSession } from './lib/auth.js';
 import { applySecurityHeaders, checkRateLimit, sanitizeText, isSafeUrl, isSafeImageUrl } from './lib/security.js';
-import { validateRegister, validateLogin, validateReview, validateComment } from './lib/validator.js';
+import { validateRegister, validateLogin, validateReview, validateComment, isValidUsername } from './lib/validator.js';
 import { searchBooks } from './lib/bookSearch.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -237,10 +237,47 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // --- AUTH: Check Username Availability ---
+      if (pathname === '/api/auth/check-username' && method === 'GET') {
+        const queryUsername = (parsedUrl.searchParams.get('username') || '').trim().toLowerCase().replace(/^@/, '');
+        if (!isValidUsername(queryUsername)) {
+          return sendJson(res, 200, {
+            available: false,
+            message: 'Must be 3-24 alphanumeric characters or underscores'
+          });
+        }
+        const currentUserId = user ? user.id : '';
+        const existing = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(queryUsername, currentUserId);
+        return sendJson(res, 200, {
+          available: !existing,
+          message: existing ? `Username @${queryUsername} is already taken` : `Username @${queryUsername} is available`
+        });
+      }
+
       // --- AUTH: Update Profile ---
       if (pathname === '/api/auth/profile' && method === 'PUT') {
         if (!user) return sendError(res, 401, 'Not authenticated');
         const body = await parseJsonBody(req);
+
+        let newUsername = user.username;
+        let newHandle = user.handle;
+
+        if (body.username !== undefined && body.username !== null) {
+          const trimmedUsername = String(body.username).trim().toLowerCase().replace(/^@/, '');
+          if (!isValidUsername(trimmedUsername)) {
+            return sendError(res, 400, 'Username must be 3-24 alphanumeric characters or underscores');
+          }
+
+          if (trimmedUsername !== (user.username || '').toLowerCase()) {
+            const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(trimmedUsername, user.id);
+            if (existingUser) {
+              return sendError(res, 409, `Username @${trimmedUsername} is already taken by another reader`);
+            }
+            newUsername = trimmedUsername;
+            newHandle = `@${trimmedUsername}`;
+          }
+        }
+
         const name = body.name ? sanitizeText(body.name.trim().slice(0, 60)) : user.name;
         const bio = body.bio !== undefined ? sanitizeText(body.bio.trim().slice(0, 500)) : user.bio;
         let avatar = user.avatar;
@@ -248,12 +285,15 @@ const server = http.createServer(async (req, res) => {
           avatar = body.avatar.trim();
         }
 
-        db.prepare('UPDATE users SET name = ?, bio = ?, avatar = ? WHERE id = ?').run(name, bio, avatar, user.id);
+        db.prepare('UPDATE users SET username = ?, handle = ?, name = ?, bio = ?, avatar = ? WHERE id = ?')
+          .run(newUsername, newHandle, name, bio, avatar, user.id);
+
+        const updatedUser = { ...user, username: newUsername, handle: newHandle, name, bio, avatar };
 
         return sendJson(res, 200, {
           success: true,
           message: 'Profile updated successfully',
-          user: { ...user, name, bio, avatar }
+          user: updatedUser
         });
       }
 
