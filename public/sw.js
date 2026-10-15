@@ -3,8 +3,8 @@
  * Robust offline-first caching & Progressive Web App resilience
  */
 
-const STATIC_CACHE = 'bookgram-static-v1';
-const DATA_CACHE = 'bookgram-data-v1';
+const STATIC_CACHE = 'bookgram-static-v2';
+const DATA_CACHE = 'bookgram-data-v2';
 
 const PRECACHE_ASSETS = [
   '/',

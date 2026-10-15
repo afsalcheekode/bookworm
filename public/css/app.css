@@ -93,3 +93,11 @@ body {
   width: 4px;
 }
 
+/* Review text 3-line clamp with ellipsis for long reviews */
+.clamp-review {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+

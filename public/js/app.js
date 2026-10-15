@@ -541,10 +541,34 @@ export const app = {
                 </div>
               ` : ''}
 
-              <!-- Review Text Body -->
-              <p class="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-line">
-                ${post.reviewText}
-              </p>
+              <!-- Review Text Body with Read more toggle for long reviews -->
+              ${(() => {
+                const text = post.reviewText || '';
+                const isLong = text.length > 180 || (text.split('\n').length >= 3);
+                if (!isLong) {
+                  return `
+                    <p class="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-line">
+                      ${text}
+                    </p>
+                  `;
+                }
+                return `
+                  <div>
+                    <p id="review-text-${post.id}" class="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-line clamp-review">
+                      ${text}
+                    </p>
+                    <button 
+                      type="button" 
+                      id="review-toggle-btn-${post.id}" 
+                      onclick="app.toggleReviewExpand('${post.id}')"
+                      class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors focus:outline-none"
+                    >
+                      <span id="review-toggle-text-${post.id}">... Read more</span>
+                      <i id="review-toggle-icon-${post.id}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+                    </button>
+                  </div>
+                `;
+              })()}
             </div>
           </div>
         </div>
@@ -649,9 +673,25 @@ export const app = {
     `;
   },
 
-  // ==========================================
-  // INTERACTIONS: LIKES, SAVES, COMMENTS
-  // ==========================================
+  // Toggle Read More / Show Less for long reviews
+  toggleReviewExpand(postId) {
+    const textEl = document.getElementById(`review-text-${postId}`);
+    const labelEl = document.getElementById(`review-toggle-text-${postId}`);
+    const iconEl = document.getElementById(`review-toggle-icon-${postId}`);
+    if (!textEl) return;
+
+    const isClamped = textEl.classList.contains('clamp-review');
+    if (isClamped) {
+      textEl.classList.remove('clamp-review');
+      if (labelEl) labelEl.textContent = 'Show less';
+      if (iconEl) iconEl.className = 'fa-solid fa-chevron-up text-[10px] transition-transform duration-200';
+    } else {
+      textEl.classList.add('clamp-review');
+      if (labelEl) labelEl.textContent = '... Read more';
+      if (iconEl) iconEl.className = 'fa-solid fa-chevron-down text-[10px] transition-transform duration-200';
+    }
+  },
+
   async toggleLike(reviewId) {
     const post = this.state.reviews.find(r => r.id === reviewId);
     if (!post) return;
