@@ -627,7 +627,7 @@ const server = http.createServer(async (req, res) => {
           LEFT JOIN likes l ON l.review_id = r.id
           LEFT JOIN comments c ON c.review_id = r.id
           GROUP BY LOWER(TRIM(r.book_title)), LOWER(TRIM(r.book_author))
-          ORDER BY engagement_score DESC, rating DESC
+          ORDER BY total_likes DESC, total_comments DESC, rating DESC
           LIMIT 1
         `).get();
 

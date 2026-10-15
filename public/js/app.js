@@ -1445,11 +1445,11 @@ export const app = {
     if (container) {
       container.innerHTML = `
         <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full inline-block">
-            Book of the Week
+          <span class="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+            <i class="fa-solid fa-heart text-[9px]"></i> Most Liked Book
           </span>
-          <span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold" title="Score = (Likes × 2) + (Comments × 3) + (Rating × 5) + Reviews">
-            Score: ${book.engagementScore} pts
+          <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold" title="Total Community Likes">
+            ${book.likesCount} ${book.likesCount === 1 ? 'like' : 'likes'}
           </span>
         </div>
         <div class="flex gap-3 mt-1 items-start">
@@ -1492,15 +1492,16 @@ export const app = {
           <img src="${book.coverUrl}" class="w-11 h-16 object-cover rounded-lg shadow shrink-0" alt="Cover" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=120'">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <span class="text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded-full">Top Book</span>
+              <span class="text-[9px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/60 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                <i class="fa-solid fa-heart text-[8px]"></i> Most Liked Book
+              </span>
               <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold">★ ${book.rating}</span>
             </div>
             <h4 class="font-serif-title font-bold text-xs text-stone-900 dark:text-stone-100 truncate mt-0.5">${book.title}</h4>
             <p class="text-[11px] text-stone-500 truncate">${book.author}</p>
             <div class="flex items-center gap-3 text-[10px] text-stone-500 dark:text-stone-400 mt-1">
-              <span><i class="fa-solid fa-heart text-rose-500 text-[9px] mr-1"></i>${book.likesCount}</span>
-              <span><i class="fa-solid fa-comment text-blue-500 text-[9px] mr-1"></i>${book.commentsCount}</span>
-              <span class="font-medium text-amber-600">${book.engagementScore} pts</span>
+              <span class="font-bold text-rose-500"><i class="fa-solid fa-heart text-[9px] mr-1"></i>${book.likesCount} likes</span>
+              <span><i class="fa-solid fa-comment text-blue-500 text-[9px] mr-1"></i>${book.commentsCount} comments</span>
             </div>
           </div>
           <a href="${book.bookLink}" target="_blank" class="p-2 text-stone-400 hover:text-brand-500" title="Read more">
