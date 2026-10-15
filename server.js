@@ -604,6 +604,57 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { success: true, isFollowing, followersCount });
       }
 
+      // --- BOOKS: Featured / Book of the Week ---
+      if (pathname === '/api/books/featured' && method === 'GET') {
+        const row = db.prepare(`
+          SELECT 
+            r.book_title,
+            r.book_author,
+            r.cover_url,
+            r.genre,
+            r.book_link,
+            ROUND(AVG(r.rating), 1) as rating,
+            COUNT(DISTINCT r.id) as review_count,
+            COUNT(DISTINCT l.user_id) as total_likes,
+            COUNT(DISTINCT c.id) as total_comments,
+            (
+              (COUNT(DISTINCT l.user_id) * 2) + 
+              (COUNT(DISTINCT c.id) * 3) + 
+              (AVG(r.rating) * 5) +
+              COUNT(DISTINCT r.id)
+            ) as engagement_score
+          FROM reviews r
+          LEFT JOIN likes l ON l.review_id = r.id
+          LEFT JOIN comments c ON c.review_id = r.id
+          GROUP BY LOWER(TRIM(r.book_title)), LOWER(TRIM(r.book_author))
+          ORDER BY engagement_score DESC, rating DESC
+          LIMIT 1
+        `).get();
+
+        if (row) {
+          return sendJson(res, 200, {
+            success: true,
+            featuredBook: {
+              title: row.book_title,
+              author: row.book_author,
+              coverUrl: row.cover_url,
+              genre: row.genre,
+              rating: row.rating,
+              reviewCount: row.review_count,
+              likesCount: row.total_likes,
+              commentsCount: row.total_comments,
+              engagementScore: Math.round(row.engagement_score),
+              bookLink: row.book_link || `https://openlibrary.org/search?q=${encodeURIComponent(row.book_title)}`
+            }
+          });
+        } else {
+          return sendJson(res, 200, {
+            success: true,
+            featuredBook: null
+          });
+        }
+      }
+
       // --- BOOKS: Search Proxy ---
       if (pathname === '/api/books/search' && method === 'GET') {
         const query = parsedUrl.searchParams.get('q') || '';

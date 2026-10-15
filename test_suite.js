@@ -224,6 +224,21 @@ async function runTests() {
   });
   assert(search.statusCode === 200 && search.body.reviews.length >= 1, 'Search: Querying reviews by keyword returns matching results');
 
+  // 14. Book of the Week / Dynamic Featured API
+  const featured = await request({
+    host: 'localhost',
+    port: 3000,
+    path: '/api/books/featured',
+    method: 'GET'
+  });
+  assert(
+    featured.statusCode === 200 &&
+    featured.body.featuredBook &&
+    typeof featured.body.featuredBook.engagementScore === 'number' &&
+    featured.body.featuredBook.likesCount >= 0,
+    'Book of the Week: Dynamic calculation by engagement score (likes + comments + rating) returns top book'
+  );
+
   console.log(`\n=========================================`);
   console.log(`   TEST RESULTS: ${passed} / ${total} PASSED`);
   console.log(`=========================================\n`);

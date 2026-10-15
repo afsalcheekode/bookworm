@@ -14,6 +14,7 @@ export const app = {
     activeFilter: 'all', // 'all', 'following', 'saved'
     activeGenre: 'all',
     searchQuery: '',
+    featuredBook: null,
     viewingProfileId: null,
     searchDebounceTimer: null,
     bookLookupDebounceTimer: null,
@@ -35,7 +36,8 @@ export const app = {
     // 5. Fetch initial data from server
     await Promise.all([
       this.fetchReviews(),
-      this.fetchSuggestedUsers()
+      this.fetchSuggestedUsers(),
+      this.fetchFeaturedBook()
     ]);
 
     // 6. Sync any pending offline reviews
@@ -316,15 +318,15 @@ export const app = {
       'Non-Fiction', 'Classics', 'Philosophy', 'Romance', 'Biography', 'History'
     ];
     const container = document.getElementById('genreContainer');
-    if (!container) return;
+    const mobileContainer = document.getElementById('mobileGenreContainer');
 
-    container.innerHTML = genres.map(g => {
+    const html = genres.map(g => {
       const val = g === 'All' ? 'all' : g;
       const isActive = this.state.activeGenre === val;
       return `
         <button 
           onclick="app.setGenreFilter('${val}')"
-          class="px-3 py-1.5 text-xs rounded-xl font-medium transition ${
+          class="px-3 py-1.5 text-xs rounded-xl font-medium transition whitespace-nowrap shrink-0 ${
             isActive 
               ? 'bg-brand-500 text-white shadow-sm font-semibold' 
               : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
@@ -334,6 +336,9 @@ export const app = {
         </button>
       `;
     }).join('');
+
+    if (container) container.innerHTML = html;
+    if (mobileContainer) mobileContainer.innerHTML = html;
   },
 
   renderSuggestedUsers() {
@@ -674,7 +679,9 @@ export const app = {
         headers: { 'Authorization': `Bearer ${this.state.authToken}` }
       });
       const data = await res.json();
-      if (!data.success) {
+      if (data.success) {
+        this.fetchFeaturedBook();
+      } else {
         // Revert on error
         await this.fetchReviews();
       }
@@ -738,6 +745,7 @@ export const app = {
       if (data.success) {
         input.value = '';
         await this.fetchReviews();
+        this.fetchFeaturedBook();
         this.toast('Comment posted', 'success');
       } else {
         this.toast(data.message || 'Error posting comment', 'error');
@@ -1372,13 +1380,33 @@ export const app = {
     this.fetchReviews();
   },
 
+  toggleMobileSearch() {
+    const drawer = document.getElementById('mobileSearchDrawer');
+    if (!drawer) return;
+    const isHidden = drawer.classList.toggle('hidden');
+    if (!isHidden) {
+      const input = document.getElementById('mobileSearchInput');
+      if (input) input.focus();
+    }
+  },
+
   handleSearch(query) {
     this.state.searchQuery = query;
+
+    // Sync values between desktop and mobile search bars
+    const desktopInput = document.getElementById('searchInput');
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (desktopInput && desktopInput.value !== query) desktopInput.value = query;
+    if (mobileInput && mobileInput.value !== query) mobileInput.value = query;
+
     const clearBtn = document.getElementById('clearSearchBtn');
+    const clearMobileBtn = document.getElementById('clearMobileSearchBtn');
     if (query.trim()) {
-      clearBtn.classList.remove('hidden');
+      if (clearBtn) clearBtn.classList.remove('hidden');
+      if (clearMobileBtn) clearMobileBtn.classList.remove('hidden');
     } else {
-      clearBtn.classList.add('hidden');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      if (clearMobileBtn) clearMobileBtn.classList.add('hidden');
     }
 
     clearTimeout(this.state.searchDebounceTimer);
@@ -1388,17 +1416,110 @@ export const app = {
   },
 
   clearSearch() {
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
+    const desktopInput = document.getElementById('searchInput');
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (desktopInput) desktopInput.value = '';
+    if (mobileInput) mobileInput.value = '';
     this.handleSearch('');
+  },
+
+  async fetchFeaturedBook() {
+    try {
+      const res = await fetch('/api/books/featured');
+      const data = await res.json();
+      if (data.success && data.featuredBook) {
+        this.state.featuredBook = data.featuredBook;
+        this.renderBookOfTheWeek();
+      }
+    } catch (e) {
+      console.warn('Featured book error:', e);
+    }
+  },
+
+  renderBookOfTheWeek() {
+    const book = this.state.featuredBook;
+    if (!book) return;
+
+    // Desktop sidebar card
+    const container = document.getElementById('bookOfTheWeekContainer');
+    if (container) {
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full inline-block">
+            Book of the Week
+          </span>
+          <span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold" title="Score = (Likes × 2) + (Comments × 3) + (Rating × 5) + Reviews">
+            Score: ${book.engagementScore} pts
+          </span>
+        </div>
+        <div class="flex gap-3 mt-1 items-start">
+          <img src="${book.coverUrl}" class="w-14 h-20 object-cover rounded-lg shadow-md shrink-0 border border-stone-200 dark:border-stone-700" alt="Book cover" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200'">
+          <div class="min-w-0 flex-1">
+            <h4 class="font-serif-title font-bold text-sm leading-tight text-stone-900 dark:text-stone-100 truncate">${book.title}</h4>
+            <p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5 truncate">${book.author}</p>
+            <div class="flex items-center gap-1.5 text-xs mt-1.5">
+              <span class="text-amber-500 font-bold text-xs flex items-center gap-0.5">
+                <i class="fa-solid fa-star text-[10px]"></i> ${book.rating}
+              </span>
+              <span class="text-[10px] text-stone-300 dark:text-stone-700">•</span>
+              <span class="text-[11px] text-rose-500 font-semibold flex items-center gap-1" title="Total Community Likes">
+                <i class="fa-solid fa-heart text-[10px]"></i> ${book.likesCount}
+              </span>
+              <span class="text-[10px] text-stone-300 dark:text-stone-700">•</span>
+              <span class="text-[11px] text-blue-500 font-semibold flex items-center gap-1" title="Total Comments">
+                <i class="fa-solid fa-comment text-[10px]"></i> ${book.commentsCount}
+              </span>
+            </div>
+            <p class="text-[10px] text-stone-400 mt-1">${book.reviewCount} ${book.reviewCount === 1 ? 'review' : 'reviews'} written</p>
+          </div>
+        </div>
+        <a 
+          href="${book.bookLink}" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="mt-3 block text-center py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 hover:border-brand-500 transition shadow-sm"
+        >
+          Explore Title & Links <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+        </a>
+      `;
+    }
+
+    // Mobile spotlight banner
+    const mobileContainer = document.getElementById('mobileBookOfTheWeekContainer');
+    if (mobileContainer) {
+      mobileContainer.innerHTML = `
+        <div class="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-rose-500/10 dark:from-amber-950/40 dark:to-rose-950/30 border border-amber-200/60 dark:border-amber-900/40 flex items-center gap-3">
+          <img src="${book.coverUrl}" class="w-11 h-16 object-cover rounded-lg shadow shrink-0" alt="Cover" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=120'">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded-full">Top Book</span>
+              <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold">★ ${book.rating}</span>
+            </div>
+            <h4 class="font-serif-title font-bold text-xs text-stone-900 dark:text-stone-100 truncate mt-0.5">${book.title}</h4>
+            <p class="text-[11px] text-stone-500 truncate">${book.author}</p>
+            <div class="flex items-center gap-3 text-[10px] text-stone-500 dark:text-stone-400 mt-1">
+              <span><i class="fa-solid fa-heart text-rose-500 text-[9px] mr-1"></i>${book.likesCount}</span>
+              <span><i class="fa-solid fa-comment text-blue-500 text-[9px] mr-1"></i>${book.commentsCount}</span>
+              <span class="font-medium text-amber-600">${book.engagementScore} pts</span>
+            </div>
+          </div>
+          <a href="${book.bookLink}" target="_blank" class="p-2 text-stone-400 hover:text-brand-500" title="Read more">
+            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+          </a>
+        </div>
+      `;
+      mobileContainer.classList.remove('hidden');
+    }
   },
 
   resetAllFilters() {
     this.state.activeFilter = 'all';
     this.state.activeGenre = 'all';
     this.state.searchQuery = '';
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
+    const desktopInput = document.getElementById('searchInput');
+    const mobileInput = document.getElementById('mobileSearchInput');
+    if (desktopInput) desktopInput.value = '';
+    if (mobileInput) mobileInput.value = '';
     this.setFeedFilter('all');
     this.renderGenres();
   },

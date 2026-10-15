@@ -74,3 +74,22 @@ body {
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
   }
 }
+
+/* Hide scrollbar for clean horizontal mobile pill scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Responsive sidebars for laptops and short screens */
+.sidebar-sticky {
+  max-height: calc(100vh - 5.5rem);
+  overflow-y: auto;
+}
+.sidebar-sticky::-webkit-scrollbar {
+  width: 4px;
+}
+
