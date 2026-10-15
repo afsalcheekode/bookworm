@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="45%" stop-color="#e0533c" />
+      <stop offset="100%" stop-color="#9e2b19" />
+    </linearGradient>
+    <linearGradient id="pageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f3ede2" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#brandGrad)" filter="url(#shadow)" />
+
+  <!-- Open Book Silhouette -->
+  <g transform="translate(106, 120)" fill="none" stroke="url(#pageGrad)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left Page -->
+    <path d="M 150 250 C 90 220 30 226 0 250 L 0 50 C 40 26 100 20 150 50 Z" fill="#ffffff" fill-opacity="0.95" stroke="#ffffff" />
+    <!-- Right Page -->
+    <path d="M 150 250 C 210 220 270 226 300 250 L 300 50 C 260 26 200 20 150 50 Z" fill="#faf6ef" fill-opacity="0.95" stroke="#ffffff" />
+    <!-- Center Spine Line -->
+    <line x1="150" y1="50" x2="150" y2="250" stroke="#e0533c" stroke-width="12" />
+  </g>
+
+  <!-- Golden Bookmark Ribbon Hanging -->
+  <polygon points="256,120 286,120 286,220 256,196 226,220 226,120" fill="#f59e0b" filter="url(#shadow)" />
+
+  <!-- Star Embellishment -->
+  <path d="M 256 70 L 262 86 L 278 86 L 265 96 L 270 112 L 256 102 L 242 112 L 247 96 L 234 86 L 250 86 Z" fill="#ffffff" />
+</svg>

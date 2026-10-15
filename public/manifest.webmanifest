@@ -1,0 +1,48 @@
+{
+  "name": "BookGram — Social Book Review Network",
+  "short_name": "BookGram",
+  "description": "Discover books, share thoughtful literary reviews, connect with avid readers, and track your reading journey.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1115",
+  "theme_color": "#e0533c",
+  "categories": ["books", "social", "literature", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Write Review",
+      "short_name": "Review",
+      "description": "Compose and publish a new book critique",
+      "url": "/?action=create",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Saved Bookshelf",
+      "short_name": "Saved",
+      "description": "View your saved books and reading queue",
+      "url": "/?feed=saved",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>BookGram — The Social Book Review Network</title>
+  
+  <!-- PWA & Mobile Optimization -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#e0533c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BookGram">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fdf4f0',
+              100: '#fae6dc',
+              500: '#e0533c',
+              600: '#c73e28',
+              700: '#9e2b19',
+            },
+            parchment: '#f9f6f0',
+            bookdark: '#121418',
+            surface: '#1e222b',
+            surfacelight: '#ffffff',
+          },
+          fontFamily: {
+            serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide & FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="bg-stone-100 text-stone-800 dark:bg-[#0f1115] dark:text-stone-100 min-h-screen transition-colors duration-200 pb-16 lg:pb-8">
+
+  <!-- Offline Connectivity Banner -->
+  <div id="offlineNoticeBar" class="hidden bg-amber-500 text-stone-900 px-4 py-2 text-xs font-bold text-center z-50 sticky top-0 shadow-md">
+    <i class="fa-solid fa-wifi-slash mr-2"></i> You are currently offline. Viewing cached reviews from your local bookshelf.
+  </div>
+
+  <!-- PWA Install In-App Banner -->
+  <div id="pwaInstallBanner" class="hidden bg-gradient-to-r from-brand-600 via-rose-600 to-amber-600 text-white px-4 py-2.5 text-xs font-medium z-40 shadow-md">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-mobile-screen-button text-base"></i>
+        <span>Install <strong>BookGram App</strong> for instant offline access and home screen launch.</span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="PWA.promptInstall()" class="px-3 py-1 bg-white text-brand-600 font-bold rounded-lg text-xs shadow hover:bg-stone-100 transition">
+          Install Now
+        </button>
+        <button onclick="PWA.dismissInstallBanner()" class="text-white/80 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-[#15181f]/90 border-b border-stone-200 dark:border-stone-800 glass-nav transition-colors">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="app.showFeed()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md">
+          <i class="fa-solid fa-book-bookmark text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-serif-title text-2xl font-bold tracking-tight bg-gradient-to-r from-brand-600 via-rose-500 to-amber-600 bg-clip-text text-transparent">
+            BookGram
+          </h1>
+          <p class="text-[10px] tracking-widest uppercase font-semibold text-stone-500 dark:text-stone-400 -mt-1">Lit & Critics</p>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="hidden sm:flex items-center flex-1 max-w-xs md:max-w-md mx-4 relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-stone-400 text-sm"></i>
+        <input 
+          id="searchInput"
+          type="text" 
+          placeholder="Search books, authors, reviewer @tag..." 
+          oninput="app.handleSearch(this.value)"
+          class="w-full pl-10 pr-8 py-2 text-sm rounded-full bg-stone-100 dark:bg-stone-800/80 border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-stone-900 focus:outline-none transition-all"
+        />
+        <button id="clearSearchBtn" onclick="app.clearSearch()" class="hidden absolute right-3 text-stone-400 hover:text-stone-600">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Install PWA Button (Visible if prompt ready) -->
+        <button 
+          id="btnInstallApp"
+          onclick="PWA.promptInstall()"
+          class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-semibold text-xs transition"
+          title="Install as Progressive Web App"
+        >
+          <i class="fa-solid fa-download text-xs"></i>
+          <span>Install App</span>
+        </button>
+
+        <!-- New Review Button -->
+        <button 
+          onclick="app.openCreateModal()"
+          class="flex items-center gap-2 px-3.5 py-2 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-medium text-xs sm:text-sm shadow-sm hover:shadow transition-all transform active:scale-95"
+          title="Write a Review"
+        >
+          <i class="fa-solid fa-feather-pointed"></i>
+          <span class="hidden md:inline">Write Review</span>
+        </button>
+
+        <!-- Dark/Light Mode Switcher -->
+        <button 
+          onclick="app.toggleTheme()" 
+          class="w-9 h-9 rounded-full flex items-center justify-center text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
+          title="Toggle Theme"
+        >
+          <i id="themeIcon" class="fa-solid fa-moon"></i>
+        </button>
+
+        <!-- Current User Avatar / Auth Menu -->
+        <div class="relative">
+          <button 
+            onclick="app.openProfile(app.state.currentUser ? app.state.currentUser.id : 'user_elena')"
+            class="flex items-center gap-2 p-1 pl-2 rounded-full border border-stone-200 dark:border-stone-700 hover:border-brand-500/50 transition-colors"
+          >
+            <span class="text-xs font-semibold hidden lg:inline max-w-[80px] truncate" id="navUserName">Elena Vance</span>
+            <img 
+              id="navUserAvatar"
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" 
+              alt="Avatar" 
+              class="w-7 h-7 rounded-full object-cover ring-2 ring-brand-500/20"
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-6xl mx-auto px-3 sm:px-4 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- LEFT SIDEBAR: Navigation, Quick Tags, Creator Stats -->
+      <aside class="hidden lg:block lg:col-span-3 sticky top-24 space-y-5">
+        
+        <!-- User mini card -->
+        <div class="bg-white dark:bg-[#171a21] border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center gap-3">
+            <img id="sidebarAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240" class="w-12 h-12 rounded-full object-cover border-2 border-brand-500" alt="Avatar">
+            <div class="overflow-hidden">
+              <h2 id="sidebarName" class="font-bold text-sm truncate">Elena Vance</h2>
+              <p id="sidebarHandle" class="text-xs text-stone-500 dark:text-stone-400 truncate">@elena_reads</p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800 grid grid-cols-3 text-center">
+            <div>
+              <p id="sidebarReviewCount" class="font-bold text-sm text-stone-900 dark:text-stone-100">0</p>
+              <p class="text-[10px] uppercase text-stone-400 font-semibold tracking-wider">Reviews</p>
+            </div>
+            <div>
+              <p id="sidebarFollowersCount" class="font-bold text-sm text-stone-900 dark:text-stone-100">0</p>
+              <p class="text-[10px] uppercase text-stone-400 font-semibold tracking-wider">Followers</p>
+            </div>
+            <div>
+              <p id="sidebarFollowingCount" class="font-bold text-sm text-stone-900 dark:text-stone-100">0</p>
+              <p class="text-[10px] uppercase text-stone-400 font-semibold tracking-wider">Following</p>
+            </div>
+          </div>
+          
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <button 
+              onclick="app.openProfile(app.state.currentUser ? app.state.currentUser.id : 'user_elena')" 
+              class="w-full py-1.5 text-xs font-semibold rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-stone-700 transition"
+            >
+              My Shelf
+            </button>
+            <button 
+              onclick="app.openAuthModal('login')" 
+              class="w-full py-1.5 text-xs font-semibold rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
+            >
+              Accounts
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Demo Account Switcher -->
+        <div class="bg-white dark:bg-[#171a21] border border-stone-200 dark:border-stone-800 rounded-2xl p-3 shadow-sm">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2">Switch Test Account</p>
+          <div class="grid grid-cols-2 gap-1.5 text-xs">
+            <button onclick="app.quickSwitchDemo('user_elena')" class="px-2 py-1.5 rounded-lg bg-stone-50 dark:bg-stone-800/60 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-left truncate flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span> Elena
+            </button>
+            <button onclick="app.quickSwitchDemo('user_marcus')" class="px-2 py-1.5 rounded-lg bg-stone-50 dark:bg-stone-800/60 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-left truncate flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span> Marcus
+            </button>
+            <button onclick="app.quickSwitchDemo('user_clara')" class="px-2 py-1.5 rounded-lg bg-stone-50 dark:bg-stone-800/60 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-left truncate flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> Clara
+            </button>
+            <button onclick="app.quickSwitchDemo('user_arthur')" class="px-2 py-1.5 rounded-lg bg-stone-50 dark:bg-stone-800/60 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-left truncate flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-purple-500 shrink-0"></span> Arthur
+            </button>
+          </div>
+        </div>
+
+        <!-- Feed Mode Switcher -->
+        <div class="bg-white dark:bg-[#171a21] border border-stone-200 dark:border-stone-800 rounded-2xl p-3 shadow-sm flex flex-col gap-1">
+          <button 
+            onclick="app.setFeedFilter('all')" 
+            id="tab-feed-all"
+            class="flex items-center justify-between px-3 py-2 text-sm rounded-xl font-bold text-brand-600 bg-brand-50 dark:bg-brand-950/40 transition"
+          >
+            <span class="flex items-center gap-2.5"><i class="fa-solid fa-compass w-4 text-center"></i> Explore All</span>
+            <span class="text-xs py-0.5 px-2 bg-brand-200/50 dark:bg-brand-900/60 rounded-full font-bold" id="badgeTotalReviews">0</span>
+          </button>
+          <button 
+            onclick="app.setFeedFilter('following')" 
+            id="tab-feed-following"
+            class="flex items-center justify-between px-3 py-2 text-sm rounded-xl font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition"
+          >
+            <span class="flex items-center gap-2.5"><i class="fa-solid fa-user-group w-4 text-center"></i> Following Feed</span>
+            <span class="text-xs py-0.5 px-2 bg-stone-200 dark:bg-stone-700 rounded-full font-bold" id="badgeFollowingCount">0</span>
+          </button>
+          <button 
+            onclick="app.setFeedFilter('saved')" 
+            id="tab-feed-saved"
+            class="flex items-center justify-between px-3 py-2 text-sm rounded-xl font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition"
+          >
+            <span class="flex items-center gap-2.5"><i class="fa-solid fa-bookmark w-4 text-center"></i> Saved Books</span>
+            <span class="text-xs py-0.5 px-2 bg-stone-200 dark:bg-stone-700 rounded-full font-bold" id="badgeSavedCount">0</span>
+          </button>
+        </div>
+
+        <!-- Genre Pill Filters -->
+        <div class="bg-white dark:bg-[#171a21] border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400">Popular Genres</h3>
+            <button onclick="app.setGenreFilter('all')" class="text-[11px] text-brand-600 hover:underline">Reset</button>
+          </div>
+          <div class="flex flex-wrap gap-1.5" id="genreContainer">
+            <!-- Dynamically injected genres -->
+          </div>
+        </div>
+
+        <!-- Footer / Credits -->
+        <div class="px-2 text-xs text-stone-400 space-y-1">
+          <p>© 2026 BookGram PWA. Real-World Literary Network.</p>
+          <p class="text-[11px]">Equipped with SQLite, Service Worker offline caching, and instant book search.</p>
+        </div>
+      </aside>
+
+      <!-- CENTER: Main Reviews Stream -->
+      <section class="col-span-1 lg:col-span-6 space-y-6" id="feedSection">
+        
+        <!-- Mobile Feed Tabs -->
+        <div class="flex lg:hidden bg-white dark:bg-[#171a21] p-1.5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm text-xs font-medium">
+          <button onclick="app.setFeedFilter('all')" id="m-tab-all" class="flex-1 py-2 rounded-xl text-center font-bold bg-brand-500 text-white">Explore</button>
+          <button onclick="app.setFeedFilter('following')" id="m-tab-following" class="flex-1 py-2 rounded-xl text-center text-stone-600 dark:text-stone-300">Following</button>
+          <button onclick="app.setFeedFilter('saved')" id="m-tab-saved" class="flex-1 py-2 rounded-xl text-center text-stone-600 dark:text-stone-300">Saved</button>
+        </div>
+
+        <!-- Active Filter Indicator Banner -->
+        <div id="filterBanner" class="hidden items-center justify-between p-3 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 rounded-2xl text-xs font-medium text-brand-700 dark:text-brand-300">
+          <span id="filterBannerText"><i class="fa-solid fa-filter mr-1.5"></i> Showing filtered results</span>
+          <button onclick="app.resetAllFilters()" class="hover:underline font-bold">Clear Filters</button>
+        </div>
+
+        <!-- Posts Stream Container -->
+        <div id="postsStream" class="space-y-6">
+          <!-- Rendered Book Cards will live here -->
+        </div>
+
+        <!-- Empty State Container -->
+        <div id="emptyFeedState" class="hidden text-center py-16 px-4 bg-white dark:bg-[#171a21] rounded-3xl border border-dashed border-stone-300 dark:border-stone-800">
+          <div class="w-16 h-16 rounded-full bg-brand-50 dark:bg-brand-950/50 text-brand-500 flex items-center justify-center mx-auto mb-3 text-2xl">
+            <i class="fa-solid fa-book-open-reader"></i>
+          </div>
+          <h3 class="text-base font-bold text-stone-800 dark:text-stone-200">No reviews found</h3>
+          <p class="text-xs text-stone-400 max-w-sm mx-auto mt-1 mb-4">Be the first to share your thoughts, quote memorable lines, or rate your latest page-turner.</p>
+          <button onclick="app.openCreateModal()" class="px-4 py-2 bg-brand-500 text-white text-xs font-semibold rounded-full shadow hover:bg-brand-600 transition">
+            Write the First Review
+          </button>
+        </div>
+      </section>
+
+      <!-- RIGHT SIDEBAR: Suggested Readers & Featured -->
+      <aside class="hidden lg:block lg:col-span-3 sticky top-24 space-y-5">
+        
+        <!-- Suggested Readers -->
+        <div class="bg-white dark:bg-[#171a21] border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400">Readers to Follow</h3>
+            <span class="text-[11px] text-brand-600 font-medium">Community</span>
+          </div>
+          <div class="space-y-3.5" id="suggestedUsersContainer">
+            <!-- Dynamically injected users -->
+          </div>
+        </div>
+
+        <!-- Book of the Week Highlight -->
+        <div class="bg-gradient-to-br from-amber-500/10 via-brand-500/10 to-rose-500/10 dark:from-amber-950/30 dark:to-rose-950/20 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl p-4">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full inline-block mb-2">Book of the Week</span>
+          <div class="flex gap-3 mt-1 items-start">
+            <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&auto=format&fit=crop&q=80" class="w-14 h-20 object-cover rounded-lg shadow-md shrink-0" alt="Book cover">
+            <div>
+              <h4 class="font-serif-title font-bold text-sm leading-tight text-stone-900 dark:text-stone-100">Tomorrow, and Tomorrow, and Tomorrow</h4>
+              <p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Gabrielle Zevin</p>
+              <div class="flex items-center gap-1 text-amber-500 text-xs mt-1">
+                <i class="fa-solid fa-star text-[11px]"></i>
+                <span class="font-bold text-stone-800 dark:text-stone-200 text-xs">4.9</span>
+                <span class="text-[10px] text-stone-400">(1,248 reviews)</span>
+              </div>
+            </div>
+          </div>
+          <a 
+            href="https://openlibrary.org/search?q=Tomorrow+and+Tomorrow+and+Tomorrow" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="mt-3 block text-center py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 hover:border-brand-500 transition shadow-sm"
+          >
+            Explore Title & Links <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+          </a>
+        </div>
+
+        <!-- PWA Status Badge -->
+        <div class="p-3 rounded-2xl bg-stone-50 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-xs text-stone-500 dark:text-stone-400 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-shield-halved text-sm"></i>
+          </div>
+          <div>
+            <p class="font-bold text-stone-800 dark:text-stone-200 text-[11px]">Hardened & PWA Ready</p>
+            <p class="text-[10px]">Encrypted scrypt passwords, CSP headers, SSRF protections, and offline caching active.</p>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Mobile Bottom App Bar -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-[#15181f]/95 border-t border-stone-200 dark:border-stone-800 glass-nav px-4 py-2 safe-bottom flex items-center justify-around text-xs">
+    <button onclick="app.setFeedFilter('all'); window.scrollTo({top:0, behavior:'smooth'});" class="flex flex-col items-center gap-1 text-stone-600 dark:text-stone-300 hover:text-brand-600">
+      <i class="fa-solid fa-compass text-base"></i>
+      <span class="text-[10px] font-medium">Explore</span>
+    </button>
+    <button onclick="app.setFeedFilter('following'); window.scrollTo({top:0, behavior:'smooth'});" class="flex flex-col items-center gap-1 text-stone-600 dark:text-stone-300 hover:text-brand-600">
+      <i class="fa-solid fa-user-group text-base"></i>
+      <span class="text-[10px] font-medium">Following</span>
+    </button>
+    <button onclick="app.openCreateModal()" class="flex flex-col items-center -mt-5">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-brand-600 to-amber-500 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
+        <i class="fa-solid fa-plus text-lg"></i>
+      </div>
+      <span class="text-[10px] font-bold text-brand-600 mt-1">Review</span>
+    </button>
+    <button onclick="app.setFeedFilter('saved'); window.scrollTo({top:0, behavior:'smooth'});" class="flex flex-col items-center gap-1 text-stone-600 dark:text-stone-300 hover:text-brand-600">
+      <i class="fa-solid fa-bookmark text-base"></i>
+      <span class="text-[10px] font-medium">Saved</span>
+    </button>
+    <button onclick="app.openProfile(app.state.currentUser ? app.state.currentUser.id : 'user_elena')" class="flex flex-col items-center gap-1 text-stone-600 dark:text-stone-300 hover:text-brand-600">
+      <i class="fa-solid fa-user text-base"></i>
+      <span class="text-[10px] font-medium">Profile</span>
+    </button>
+  </nav>
+
+  <!-- ========================================== -->
+  <!-- MODALS                                      -->
+  <!-- ========================================== -->
+
+  <!-- 1. WRITE REVIEW MODAL with Live Book Search -->
+  <div id="createModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white dark:bg-[#161922] w-full max-w-xl rounded-3xl border border-stone-200 dark:border-stone-800 overflow-hidden shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-stone-100 dark:border-stone-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 flex items-center justify-center">
+            <i class="fa-solid fa-feather-pointed text-sm"></i>
+          </div>
+          <h2 class="font-serif-title font-bold text-lg text-stone-900 dark:text-stone-100">Publish Book Review</h2>
+        </div>
+        <button onclick="app.closeCreateModal()" class="w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Review Form -->
+      <form id="reviewForm" onsubmit="app.handleCreateReview(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <!-- Book Title with Live Autocomplete -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="relative">
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">
+              Book Title * <span class="text-brand-600 font-normal lowercase">(live search)</span>
+            </label>
+            <input 
+              type="text" 
+              id="inputTitle" 
+              required 
+              autocomplete="off"
+              placeholder="Type title to search books..." 
+              oninput="app.handleBookTitleInput(this.value)"
+              class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition"
+            >
+            <!-- Autocomplete Dropdown List -->
+            <div id="bookAutocompleteList" class="hidden absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#1a1e28] border border-stone-200 dark:border-stone-700 rounded-xl shadow-xl z-20 max-h-56 overflow-y-auto"></div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Author Name *</label>
+            <input 
+              type="text" 
+              id="inputAuthor" 
+              required 
+              placeholder="e.g. Frank Herbert" 
+              class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition"
+            >
+          </div>
+        </div>
+
+        <!-- Cover Image URL & Genre Selection -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Book Cover Image URL *</label>
+            <div class="flex gap-2">
+              <input 
+                type="url" 
+                id="inputCover" 
+                required 
+                placeholder="https://images.unsplash.com/..." 
+                class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition"
+              >
+              <button 
+                type="button" 
+                onclick="app.insertPresetCover()" 
+                class="px-2.5 py-2 text-[11px] font-semibold text-brand-600 bg-brand-50 dark:bg-brand-950/60 rounded-xl hover:bg-brand-100 whitespace-nowrap"
+                title="Use demo sample cover"
+              >
+                Sample
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Genre</label>
+            <select 
+              id="inputGenre" 
+              class="w-full px-3 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition"
+            >
+              <option value="Fiction">Fiction</option>
+              <option value="Sci-Fi & Fantasy">Sci-Fi & Fantasy</option>
+              <option value="Mystery & Thriller">Mystery & Thriller</option>
+              <option value="Non-Fiction">Non-Fiction</option>
+              <option value="Classics">Classics</option>
+              <option value="Romance">Romance</option>
+              <option value="Philosophy">Philosophy</option>
+              <option value="Biography">Biography</option>
+              <option value="History">History</option>
+              <option value="Self-Help">Self-Help</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Star Rating Picker -->
+        <div>
+          <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Your Rating *</label>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center text-2xl text-amber-400 gap-1" id="starPicker">
+              <i class="fa-solid fa-star cursor-pointer transition hover:scale-110" onclick="app.setRating(1)"></i>
+              <i class="fa-solid fa-star cursor-pointer transition hover:scale-110" onclick="app.setRating(2)"></i>
+              <i class="fa-solid fa-star cursor-pointer transition hover:scale-110" onclick="app.setRating(3)"></i>
+              <i class="fa-solid fa-star cursor-pointer transition hover:scale-110" onclick="app.setRating(4)"></i>
+              <i class="fa-solid fa-star cursor-pointer transition hover:scale-110" onclick="app.setRating(5)"></i>
+            </div>
+            <span id="ratingDisplayNumber" class="text-sm font-bold text-stone-700 dark:text-stone-300 ml-2">5.0 / 5</span>
+          </div>
+          <input type="hidden" id="inputRating" value="5">
+        </div>
+
+        <!-- Store / Goodreads Link -->
+        <div>
+          <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">
+            Book Purchase / Web Link <span class="text-stone-400 font-normal lowercase">(optional)</span>
+          </label>
+          <div class="relative">
+            <i class="fa-solid fa-link absolute left-3.5 top-3.5 text-xs text-stone-400"></i>
+            <input 
+              type="url" 
+              id="inputBookLink" 
+              placeholder="https://openlibrary.org/... or https://goodreads.com/..." 
+              class="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition"
+            >
+          </div>
+        </div>
+
+        <!-- Detailed Review Body -->
+        <div>
+          <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Detailed Review *</label>
+          <textarea 
+            id="inputReviewText" 
+            required 
+            rows="4" 
+            placeholder="What made this book stand out? Analyze writing style, plot pacing, character arcs, and personal emotional takeaway..." 
+            class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition"
+          ></textarea>
+        </div>
+
+        <!-- Memorable Quote -->
+        <div>
+          <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">
+            Favorite Quote <span class="text-stone-400 font-normal lowercase">(optional)</span>
+          </label>
+          <input 
+            type="text" 
+            id="inputQuote" 
+            placeholder='e.g. "Between life and death there is a library..."' 
+            class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition italic"
+          >
+        </div>
+
+        <!-- Form Actions -->
+        <div class="pt-3 border-t border-stone-100 dark:border-stone-800 flex justify-end gap-3">
+          <button 
+            type="button" 
+            onclick="app.closeCreateModal()" 
+            class="px-5 py-2.5 text-xs font-semibold rounded-xl text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition transform active:scale-95"
+          >
+            Post Review
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. USER PROFILE MODAL -->
+  <div id="profileModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white dark:bg-[#161922] w-full max-w-2xl rounded-3xl border border-stone-200 dark:border-stone-800 overflow-hidden shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Close button -->
+      <button onclick="app.closeProfileModal()" class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <!-- Banner -->
+      <div class="h-32 bg-gradient-to-r from-amber-600 via-rose-600 to-brand-600"></div>
+
+      <!-- Profile Details -->
+      <div class="px-6 pb-6 relative pt-0">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between -mt-14 mb-4 gap-4">
+          <div class="flex items-end gap-4">
+            <img id="modalProfileAvatar" src="" class="w-24 h-24 rounded-full border-4 border-white dark:border-[#161922] object-cover shadow-lg bg-stone-200" alt="Avatar">
+            <div class="mb-1">
+              <h2 id="modalProfileName" class="text-xl font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2"></h2>
+              <p id="modalProfileHandle" class="text-xs text-stone-500 dark:text-stone-400"></p>
+            </div>
+          </div>
+          <div id="modalProfileActionBtn">
+            <!-- Follow or Edit Profile injected here -->
+          </div>
+        </div>
+
+        <p id="modalProfileBio" class="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed max-w-xl"></p>
+
+        <!-- Stats Bar -->
+        <div class="flex gap-6 mt-4 pt-4 border-t border-stone-100 dark:border-stone-800/80 text-center sm:text-left">
+          <div>
+            <span id="modalStatReviews" class="text-base font-bold text-stone-900 dark:text-white">0</span>
+            <span class="text-xs text-stone-400 ml-1">Reviews</span>
+          </div>
+          <div>
+            <span id="modalStatFollowers" class="text-base font-bold text-stone-900 dark:text-white">0</span>
+            <span class="text-xs text-stone-400 ml-1">Followers</span>
+          </div>
+          <div>
+            <span id="modalStatFollowing" class="text-base font-bold text-stone-900 dark:text-white">0</span>
+            <span class="text-xs text-stone-400 ml-1">Following</span>
+          </div>
+        </div>
+
+        <!-- Profile Tabs -->
+        <div class="flex border-b border-stone-200 dark:border-stone-800 mt-6 gap-6 text-sm font-semibold">
+          <button id="pTabReviews" onclick="app.switchProfileTab('reviews')" class="pb-3 border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 font-bold">Reviews Written</button>
+          <button id="pTabLiked" onclick="app.switchProfileTab('liked')" class="pb-3 border-b-2 border-transparent text-stone-500 hover:text-stone-900">Favorites & Likes</button>
+        </div>
+
+        <!-- Profile Reviews Stream -->
+        <div id="modalProfilePosts" class="mt-4 space-y-4 max-h-[420px] overflow-y-auto pr-1">
+          <!-- Dynamic Profile Posts -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. AUTHENTICATION MODAL (Login / Register / Account Switch) -->
+  <div id="authModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white dark:bg-[#161922] w-full max-w-md rounded-3xl border border-stone-200 dark:border-stone-800 overflow-hidden shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Close button -->
+      <button onclick="app.closeAuthModal()" class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-600 flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="p-6">
+        <div class="text-center mb-5">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white mx-auto shadow-md mb-2">
+            <i class="fa-solid fa-book-bookmark text-xl"></i>
+          </div>
+          <h2 class="font-serif-title font-bold text-xl text-stone-900 dark:text-stone-100">BookGram Account</h2>
+          <p class="text-xs text-stone-500 dark:text-stone-400 mt-1">Sign in, register, or test with community demo profiles</p>
+        </div>
+
+        <!-- Auth Tabs -->
+        <div class="flex border-b border-stone-200 dark:border-stone-800 mb-5 text-xs font-semibold gap-4">
+          <button id="tabAuthLogin" onclick="app.switchAuthTab('login')" class="pb-2 border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 font-bold">Sign In</button>
+          <button id="tabAuthRegister" onclick="app.switchAuthTab('register')" class="pb-2 border-b-2 border-transparent text-stone-500 hover:text-stone-900">Create Account</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="app.handleLogin(event)" class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Username or Email</label>
+            <input type="text" id="loginUsername" required placeholder="elena or elena@bookgram.net" class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Password</label>
+            <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition">
+            <p class="text-[11px] text-stone-400 mt-1">Demo password for seed accounts is <code>Password123!</code></p>
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs shadow transition active:scale-95">
+            Sign In
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" onsubmit="app.handleRegister(event)" class="hidden space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Full Name</label>
+            <input type="text" id="regName" required placeholder="e.g. Gabriel Garcia" class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Username</label>
+            <input type="text" id="regUsername" required placeholder="e.g. gabriel_books" class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Email</label>
+            <input type="email" id="regEmail" required placeholder="gabriel@example.com" class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Password (min 8 chars)</label>
+            <input type="password" id="regPassword" required minlength="8" placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 focus:border-brand-500 focus:outline-none transition">
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs shadow transition active:scale-95">
+            Create Free Account
+          </button>
+        </form>
+
+        <!-- Quick One-Click Switcher for Demo testing -->
+        <div class="mt-6 pt-4 border-t border-stone-100 dark:border-stone-800">
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider text-center mb-2">Or switch active reader instantly</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button onclick="app.quickSwitchDemo('user_elena'); app.closeAuthModal();" class="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-center hover:bg-brand-50 hover:text-brand-600 transition font-semibold">
+              Elena Vance
+            </button>
+            <button onclick="app.quickSwitchDemo('user_marcus'); app.closeAuthModal();" class="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-center hover:bg-brand-50 hover:text-brand-600 transition font-semibold">
+              Marcus Chen
+            </button>
+          </div>
+          <button onclick="app.handleLogout(); app.closeAuthModal();" class="mt-3 w-full text-center text-xs text-rose-500 hover:underline">
+            Log Out Current Session
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- PWA & Application Core Modules -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

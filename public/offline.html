@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookGram — You are Offline</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Playfair+Display:wght@700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-serif-title { font-family: 'Playfair Display', serif; }
+  </style>
+</head>
+<body class="bg-stone-100 text-stone-800 dark:bg-[#0f1115] dark:text-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-white dark:bg-[#161922] p-8 rounded-3xl border border-stone-200 dark:border-stone-800 shadow-xl text-center">
+    <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto mb-4 text-3xl">
+      <i class="fa-solid fa-wifi-slash"></i>
+    </div>
+    <h1 class="font-serif-title text-2xl font-bold text-stone-900 dark:text-white mb-2">You're Offline</h1>
+    <p class="text-sm text-stone-600 dark:text-stone-400 mb-6 leading-relaxed">
+      BookGram is currently offline. You can still read cached book reviews and your saved bookshelf. When your connection returns, everything will sync automatically.
+    </p>
+    <div class="space-y-3">
+      <button onclick="window.location.href='/'" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 text-white font-semibold text-sm shadow hover:opacity-95 transition">
+        <i class="fa-solid fa-book-open mr-2"></i> Open Cached Bookshelf
+      </button>
+      <button onclick="window.location.reload()" class="w-full py-2.5 px-4 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 font-semibold text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+        <i class="fa-solid fa-rotate-right mr-2"></i> Try Reconnecting
+      </button>
+    </div>
+  </div>
+</body>
+</html>
