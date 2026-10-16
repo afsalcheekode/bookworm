@@ -81,7 +81,6 @@ All pre-seeded demo accounts share the password: `Password123!`
 | `GET` | `/api/health` | Service health status & metadata | No |
 | `POST` | `/api/auth/register` | Register new user account | No |
 | `POST` | `/api/auth/login` | Login with username/email & password | No |
-| `POST` | `/api/auth/switch-demo` | Fast demo profile switcher | No |
 | `GET` | `/api/auth/me` | Fetch active user session & stats | Yes |
 | `POST` | `/api/auth/logout` | Revoke session | Yes |
 | `PUT` | `/api/auth/profile` | Update user name, bio, or avatar | Yes |

@@ -260,7 +260,29 @@ export const app = {
 
   updateUserUI() {
     const u = this.state.currentUser;
-    if (!u) return;
+    const navProfileBtn = document.getElementById('navProfileBtn');
+    const navLogoutBtn = document.getElementById('navLogoutBtn');
+    const navLoginBtn = document.getElementById('navLoginBtn');
+    const sidebarLoggedInCard = document.getElementById('sidebarLoggedInCard');
+    const sidebarGuestCard = document.getElementById('sidebarGuestCard');
+    const mobileProfileLabel = document.getElementById('mobileProfileLabel');
+
+    if (!u) {
+      if (navProfileBtn) navProfileBtn.classList.add('hidden');
+      if (navLogoutBtn) navLogoutBtn.classList.add('hidden');
+      if (navLoginBtn) navLoginBtn.classList.remove('hidden');
+      if (sidebarLoggedInCard) sidebarLoggedInCard.classList.add('hidden');
+      if (sidebarGuestCard) sidebarGuestCard.classList.remove('hidden');
+      if (mobileProfileLabel) mobileProfileLabel.textContent = 'Sign In';
+      return;
+    }
+
+    if (navProfileBtn) navProfileBtn.classList.remove('hidden');
+    if (navLogoutBtn) navLogoutBtn.classList.remove('hidden');
+    if (navLoginBtn) navLoginBtn.classList.add('hidden');
+    if (sidebarLoggedInCard) sidebarLoggedInCard.classList.remove('hidden');
+    if (sidebarGuestCard) sidebarGuestCard.classList.add('hidden');
+    if (mobileProfileLabel) mobileProfileLabel.textContent = 'Profile';
 
     // Desktop header
     const navName = document.getElementById('navUserName');
@@ -291,31 +313,49 @@ export const app = {
     if (bSaved && u.savedReviewIds) bSaved.textContent = u.savedReviewIds.length;
   },
 
-  async quickSwitchDemo(userId, notify = true) {
+  handleMobileProfileClick() {
+    if (this.state.currentUser) {
+      this.openProfile(this.state.currentUser.id);
+    } else {
+      this.showAuthView('login');
+    }
+  },
+
+  async loginWithCredentials(username, password) {
     try {
-      const res = await fetch('/api/auth/switch-demo', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ username, password })
       });
       const data = await res.json();
       if (data.success) {
         this.state.authToken = data.token;
         this.setToken(data.token);
         this.setCurrentUser(data.user);
+        this.closeAuthModal();
         this.showMainApp();
         await this.fetchReviews();
         await this.fetchSuggestedUsers();
-        if (notify) this.toast(`Switched account to ${data.user.name}`, 'success');
+        await this.fetchFeaturedBook();
+        this.toast(`Welcome back, ${data.user.name}!`, 'success');
+        return true;
+      } else {
+        this.toast(data.message || 'Login failed', 'error');
+        return false;
       }
-    } catch (err) {
-      console.error('Switch demo error:', err);
+    } catch {
+      this.toast('Connection error during login', 'error');
+      return false;
     }
   },
 
-  async quickLoginDemo(userId) {
-    await this.quickSwitchDemo(userId, false);
-    this.toast(`Signed in as ${this.state.currentUser.name}!`, 'success');
+  async fillDemoLogin(username, password) {
+    const uInput = document.getElementById('instaLoginUsername');
+    const pInput = document.getElementById('instaLoginPassword');
+    if (uInput) uInput.value = username;
+    if (pInput) pInput.value = password;
+    await this.loginWithCredentials(username, password);
   },
 
   openAuthModal(mode = 'login') {
@@ -480,6 +520,10 @@ export const app = {
     this.removeToken();
     this.state.authToken = null;
     this.state.currentUser = null;
+    this.updateUserUI();
+    this.closeProfileModal();
+    this.closeAuthModal();
+    this.closeCreateModal();
     this.toast('Logged out successfully', 'info');
     this.showAuthView('login');
   },
@@ -1354,6 +1398,10 @@ export const app = {
             <button onclick="app.closeProfileModal(); app.openCreateModal();" class="px-4 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-full text-xs font-bold transition shadow flex items-center gap-1.5">
               <i class="fa-solid fa-plus text-xs"></i>
               <span>New Review</span>
+            </button>
+            <button onclick="app.handleLogout();" class="px-3 py-1.5 border border-rose-200 dark:border-rose-900/60 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Log Out">
+              <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+              <span>Log Out</span>
             </button>
           </div>
         `;

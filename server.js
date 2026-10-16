@@ -33,7 +33,7 @@ const MIME_TYPES = {
 };
 
 // Request Helper: Parse JSON Body
-function parseJsonBody(req, maxSize = 5 * 1024 * 1024) {
+function parseJsonBody(req, maxSize = 256 * 1024) {
   return new Promise((resolve, reject) => {
     let raw = '';
     let size = 0;
@@ -100,7 +100,8 @@ const server = http.createServer(async (req, res) => {
   // Apply Security Headers to every response
   applySecurityHeaders(res);
 
-  const ip = req.socket.remoteAddress || 'unknown';
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (req.socket.remoteAddress || 'unknown');
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
   const method = req.method;
@@ -159,7 +160,12 @@ const server = http.createServer(async (req, res) => {
 
         const session = createSession(userId);
 
-        res.setHeader('Set-Cookie', `bookgram_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+        const isProd = process.env.NODE_ENV === 'production';
+        const cookieFlags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isProd ? '; Secure' : ''}`;
+        res.setHeader('Set-Cookie', [
+          `bookworm_session=${encodeURIComponent(session.token)}; ${cookieFlags}`,
+          `bookgram_session=${encodeURIComponent(session.token)}; ${cookieFlags}`
+        ]);
         return sendJson(res, 201, {
           success: true,
           token: session.token,
@@ -181,7 +187,12 @@ const server = http.createServer(async (req, res) => {
         }
 
         const session = createSession(row.id);
-        res.setHeader('Set-Cookie', `bookgram_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+        const isProd = process.env.NODE_ENV === 'production';
+        const cookieFlags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isProd ? '; Secure' : ''}`;
+        res.setHeader('Set-Cookie', [
+          `bookworm_session=${encodeURIComponent(session.token)}; ${cookieFlags}`,
+          `bookgram_session=${encodeURIComponent(session.token)}; ${cookieFlags}`
+        ]);
 
         return sendJson(res, 200, {
           success: true,
@@ -195,24 +206,6 @@ const server = http.createServer(async (req, res) => {
             bio: row.bio,
             avatar: row.avatar
           }
-        });
-      }
-
-      // --- AUTH: Quick Switch Demo Account ---
-      if (pathname === '/api/auth/switch-demo' && method === 'POST') {
-        const body = await parseJsonBody(req);
-        const targetUserId = body.userId;
-        const targetUser = db.prepare('SELECT id, username, email, name, handle, bio, avatar FROM users WHERE id = ?').get(targetUserId);
-
-        if (!targetUser) return sendError(res, 404, 'Demo user not found');
-
-        const session = createSession(targetUser.id);
-        res.setHeader('Set-Cookie', `bookgram_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
-
-        return sendJson(res, 200, {
-          success: true,
-          token: session.token,
-          user: targetUser
         });
       }
 
@@ -303,7 +296,10 @@ const server = http.createServer(async (req, res) => {
         if (authHeader && authHeader.startsWith('Bearer ')) {
           revokeSession(authHeader.slice(7).trim());
         }
-        res.setHeader('Set-Cookie', 'bookgram_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+        res.setHeader('Set-Cookie', [
+          'bookworm_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+          'bookgram_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+        ]);
         return sendJson(res, 200, { success: true, message: 'Logged out successfully' });
       }
 
