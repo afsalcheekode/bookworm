@@ -101,3 +101,116 @@ body {
   overflow: hidden;
 }
 
+/* ========================================================
+   BOOK-RELATED OPENING ANIMATION & SPLASH SCREEN
+   ======================================================== */
+.book-loader {
+  position: relative;
+  width: 100px;
+  height: 72px;
+  perspective: 600px;
+}
+
+.book-base {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.book-wing-left, .book-wing-right {
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(135deg, #e0533c 0%, #b91c1c 100%);
+  box-shadow: 0 10px 25px rgba(224, 83, 60, 0.4);
+}
+
+.book-wing-left {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  border-right: 2px solid rgba(0, 0, 0, 0.15);
+}
+
+.book-wing-right {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-left: 2px solid rgba(0, 0, 0, 0.15);
+}
+
+.book-pages-stack {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+}
+
+.book-static-page {
+  width: 50%;
+  height: 100%;
+  background: #fffdfa;
+}
+.book-static-page:first-child {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  border-right: 1px solid #e7dfd5;
+}
+.book-static-page:last-child {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.flipping-page {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 50%;
+  width: calc(50% - 6px);
+  background: #ffffff;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  transform-origin: left center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  animation: turnPage 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.flipping-page:nth-child(2) {
+  animation-delay: 0.25s;
+}
+
+.flipping-page:nth-child(3) {
+  animation-delay: 0.5s;
+}
+
+@keyframes turnPage {
+  0% {
+    transform: rotateY(0deg);
+    background: #ffffff;
+  }
+  50% {
+    background: #f7f0e6;
+  }
+  100% {
+    transform: rotateY(-180deg);
+    background: #ffffff;
+  }
+}
+
+/* Floating reading stars & glow */
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 0.75; }
+}
+.animate-glow {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes floatMascot {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+.animate-float-mascot {
+  animation: floatMascot 3s ease-in-out infinite;
+}
+
+

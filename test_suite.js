@@ -22,7 +22,7 @@ function request(options, postData = null) {
 }
 
 async function runTests() {
-  console.log('--- Starting Comprehensive BookGram Verification Test Suite ---\n');
+  console.log('--- Starting Comprehensive BookWorm Verification Test Suite ---\n');
   let passed = 0;
   let total = 0;
 
@@ -43,7 +43,7 @@ async function runTests() {
     path: '/api/health',
     method: 'GET'
   });
-  assert(health.statusCode === 200 && health.body.status === 'healthy', 'GET /api/health returns 200 and healthy status');
+  assert(health.statusCode === 200 && health.body.status === 'healthy' && health.body.app === 'BookWorm', 'GET /api/health returns 200 and BookWorm app identity');
   assert(health.headers['content-security-policy']?.includes("default-src 'self'"), 'Security: CSP header enforced');
   assert(health.headers['x-frame-options'] === 'DENY', 'Security: X-Frame-Options: DENY enforced');
   assert(health.headers['x-content-type-options'] === 'nosniff', 'Security: X-Content-Type-Options enforced');

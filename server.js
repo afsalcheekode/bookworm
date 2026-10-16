@@ -70,7 +70,7 @@ function authenticateRequest(req) {
     const cookies = req.headers['cookie'].split(';');
     for (const c of cookies) {
       const [k, v] = c.trim().split('=');
-      if (k === 'bookgram_session') {
+      if (k === 'bookworm_session' || k === 'bookgram_session') {
         token = decodeURIComponent(v);
         break;
       }
@@ -124,7 +124,7 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/health' && method === 'GET') {
         return sendJson(res, 200, {
           status: 'healthy',
-          app: 'BookGram',
+          app: 'BookWorm',
           version: '1.0.0',
           timestamp: new Date().toISOString()
         });
@@ -828,14 +828,14 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
-  console.log(`   BookGram PWA — Real-World Social Review Network`);
+  console.log(`   BookWorm PWA — Real-World Social Review Network`);
   console.log(`   Server listening securely at http://localhost:${PORT}`);
   console.log(`======================================================\n`);
 });
 
 // Graceful termination
 process.on('SIGINT', () => {
-  console.log('\nShutting down BookGram server gracefully...');
+  console.log('\nShutting down BookWorm server gracefully...');
   server.close(() => {
     db.close();
     process.exit(0);

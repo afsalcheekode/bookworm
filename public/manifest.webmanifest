@@ -1,6 +1,6 @@
 {
-  "name": "BookGram — Social Book Review Network",
-  "short_name": "BookGram",
+  "name": "BookWorm — Social Book Review Network",
+  "short_name": "BookWorm",
   "description": "Discover books, share thoughtful literary reviews, connect with avid readers, and track your reading journey.",
   "start_url": "/",
   "scope": "/",

@@ -1,8 +1,8 @@
 {
-  "name": "bookgram-pwa",
+  "name": "bookworm-pwa",
   "version": "1.0.0",
   "type": "module",
-  "description": "BookGram — Secure, High-Performance Social Book Review Network & PWA",
+  "description": "BookWorm — Secure, High-Performance Social Book Review Network & PWA",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -16,7 +16,7 @@
     "security",
     "sqlite"
   ],
-  "author": "BookGram Team",
+  "author": "BookWorm Team",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"

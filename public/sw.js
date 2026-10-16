@@ -1,10 +1,10 @@
 /**
- * BookGram Service Worker
+ * BookWorm Service Worker
  * Robust offline-first caching & Progressive Web App resilience
  */
 
-const STATIC_CACHE = 'bookgram-static-v5';
-const DATA_CACHE = 'bookgram-data-v5';
+const STATIC_CACHE = 'bookworm-static-v6';
+const DATA_CACHE = 'bookworm-data-v6';
 
 const PRECACHE_ASSETS = [
   '/',

@@ -1,5 +1,5 @@
 /**
- * BookGram Core Application Client
+ * BookWorm Core Application Client
  * Real-world Production PWA Architecture with REST API & Offline Draft Sync
  */
 
@@ -20,6 +20,23 @@ export const app = {
     bookLookupDebounceTimer: null,
   },
 
+  // Token & Session Storage Helpers
+  getToken() {
+    return localStorage.getItem('bookworm_token') || localStorage.getItem('bookgram_token');
+  },
+
+  setToken(token) {
+    localStorage.setItem('bookworm_token', token);
+    localStorage.setItem('bookgram_token', token);
+  },
+
+  removeToken() {
+    localStorage.removeItem('bookworm_token');
+    localStorage.removeItem('bookgram_token');
+    localStorage.removeItem('bookworm_cached_user');
+    localStorage.removeItem('bookgram_cached_user');
+  },
+
   async init() {
     // 1. Initialize PWA Service Worker & Install Monitor
     PWA.init();
@@ -27,20 +44,32 @@ export const app = {
     // 2. Load theme
     this.initTheme();
 
-    // 3. Load or restore session
-    await this.restoreAuthSession();
-
-    // 4. Render shell components
+    // 3. Render shell components
     this.renderGenres();
-    
-    // 5. Fetch initial data from server
+
+    // 4. Load or restore session
+    const hasSession = await this.restoreAuthSession();
+
+    // 5. Book-Themed Opening Splash Animation handler
+    // Gives the user enough time to see the 3D flipping book and BookWorm branding
+    setTimeout(() => {
+      const splash = document.getElementById('appSplashScreen');
+      if (splash) {
+        splash.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          splash.classList.add('hidden');
+        }, 700);
+      }
+    }, 1600);
+
+    // 6. Fetch initial data from server
     await Promise.all([
       this.fetchReviews(),
       this.fetchSuggestedUsers(),
       this.fetchFeaturedBook()
     ]);
 
-    // 6. Sync any pending offline reviews
+    // 7. Sync any pending offline reviews
     this.syncOfflineQueue();
   },
 
@@ -48,7 +77,7 @@ export const app = {
   // THEME MANAGEMENT
   // ==========================================
   initTheme() {
-    const savedTheme = localStorage.getItem('bookgram_theme');
+    const savedTheme = localStorage.getItem('bookworm_theme') || localStorage.getItem('bookgram_theme');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = savedTheme ? savedTheme === 'dark' : prefersDark;
 
@@ -64,24 +93,131 @@ export const app = {
     const icon = document.getElementById('themeIcon');
     if (isDark) {
       if (icon) icon.classList.replace('fa-moon', 'fa-sun');
+      localStorage.setItem('bookworm_theme', 'dark');
       localStorage.setItem('bookgram_theme', 'dark');
       this.toast('Dark mode activated', 'info');
     } else {
       if (icon) icon.classList.replace('fa-sun', 'fa-moon');
+      localStorage.setItem('bookworm_theme', 'light');
       localStorage.setItem('bookgram_theme', 'light');
       this.toast('Light mode activated', 'info');
     }
   },
 
   // ==========================================
+  // VIEW SWITCHING (Instagram Auth vs Main App)
+  // ==========================================
+  showMainApp() {
+    const mainView = document.getElementById('appMainView');
+    const authView = document.getElementById('instagramAuthView');
+    if (mainView) mainView.classList.remove('hidden');
+    if (authView) authView.classList.add('hidden');
+  },
+
+  showAuthView(mode = 'login') {
+    const mainView = document.getElementById('appMainView');
+    const authView = document.getElementById('instagramAuthView');
+    if (mainView) mainView.classList.add('hidden');
+    if (authView) authView.classList.remove('hidden');
+    this.toggleInstaAuth(mode);
+  },
+
+  continueAsGuest() {
+    this.showMainApp();
+    this.toast('Browsing BookWorm feed as Guest. Sign in anytime to like, comment, or review!', 'info');
+  },
+
+  // Password Visibility Toggle
+  togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) {
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      }
+    } else {
+      input.type = 'password';
+      if (icon) {
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+  },
+
+  // Switch between Instagram Log In & Sign Up forms
+  toggleInstaAuth(mode) {
+    const loginForm = document.getElementById('instaLoginForm');
+    const regForm = document.getElementById('instaRegisterForm');
+    const switchPrompt = document.getElementById('instaSwitchPrompt');
+    const subtext = document.getElementById('instaHeaderSubtext');
+
+    if (mode === 'signup') {
+      if (loginForm) loginForm.classList.add('hidden');
+      if (regForm) regForm.classList.remove('hidden');
+      if (subtext) subtext.textContent = 'Sign up to share your reading journeys, write reviews, and connect with book lovers.';
+      if (switchPrompt) {
+        switchPrompt.innerHTML = `Have an account? <button type="button" onclick="app.toggleInstaAuth('login')" class="text-brand-600 dark:text-brand-400 font-bold hover:underline ml-1">Log in</button>`;
+      }
+    } else {
+      if (loginForm) loginForm.classList.remove('hidden');
+      if (regForm) regForm.classList.add('hidden');
+      if (subtext) subtext.textContent = 'Sign in to see reviews, quotes, and reading notes from fellow book lovers.';
+      if (switchPrompt) {
+        switchPrompt.innerHTML = `Don't have an account? <button type="button" onclick="app.toggleInstaAuth('signup')" class="text-brand-600 dark:text-brand-400 font-bold hover:underline ml-1">Sign up</button>`;
+      }
+    }
+  },
+
+  // Live username availability check on Instagram Sign Up form
+  handleInstaUsernameCheck(rawVal) {
+    clearTimeout(this.state.searchDebounceTimer);
+    const feedback = document.getElementById('instaUsernameFeedback');
+    const val = rawVal.trim().replace(/^@/, '');
+    if (!val) {
+      if (feedback) feedback.innerHTML = '';
+      return;
+    }
+    if (val.length < 3) {
+      if (feedback) feedback.innerHTML = '<span class="text-amber-500 text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Min 3 characters</span>';
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(val)) {
+      if (feedback) feedback.innerHTML = '<span class="text-rose-500 text-[11px]"><i class="fa-solid fa-circle-xmark mr-1"></i>Letters, numbers & _ only</span>';
+      return;
+    }
+
+    if (feedback) {
+      feedback.innerHTML = '<span class="text-stone-400 text-[11px]"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Checking availability...</span>';
+    }
+
+    this.state.searchDebounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        if (feedback) {
+          if (data.available) {
+            feedback.innerHTML = `<span class="text-emerald-500 font-semibold text-[11px]"><i class="fa-solid fa-circle-check mr-1"></i>@${val} is available</span>`;
+          } else {
+            feedback.innerHTML = `<span class="text-rose-500 font-semibold text-[11px]"><i class="fa-solid fa-circle-xmark mr-1"></i>@${val} is already taken</span>`;
+          }
+        }
+      } catch {
+        if (feedback) feedback.innerHTML = '';
+      }
+    }, 280);
+  },
+
+  // ==========================================
   // AUTHENTICATION & DEMO ACCOUNTS
   // ==========================================
   async restoreAuthSession() {
-    const token = localStorage.getItem('bookgram_token');
+    const token = this.getToken();
     if (!token) {
-      // Default to Elena Vance as the active demo user session for zero-friction exploration
-      await this.quickSwitchDemo('user_elena', false);
-      return;
+      this.showAuthView('login');
+      return false;
     }
 
     this.state.authToken = token;
@@ -92,23 +228,33 @@ export const app = {
       const data = await res.json();
       if (data.success && data.user) {
         this.setCurrentUser(data.user);
+        this.showMainApp();
+        return true;
       } else {
-        await this.quickSwitchDemo('user_elena', false);
+        this.removeToken();
+        this.showAuthView('login');
+        return false;
       }
     } catch {
       // If offline, use cached user profile from localStorage
-      const cached = localStorage.getItem('bookgram_cached_user');
+      const cached = localStorage.getItem('bookworm_cached_user') || localStorage.getItem('bookgram_cached_user');
       if (cached) {
         this.setCurrentUser(JSON.parse(cached));
+        this.showMainApp();
+        return true;
       } else {
-        await this.quickSwitchDemo('user_elena', false);
+        this.showAuthView('login');
+        return false;
       }
     }
   },
 
   setCurrentUser(user) {
     this.state.currentUser = user;
-    localStorage.setItem('bookgram_cached_user', JSON.stringify(user));
+    if (user) {
+      localStorage.setItem('bookworm_cached_user', JSON.stringify(user));
+      localStorage.setItem('bookgram_cached_user', JSON.stringify(user));
+    }
     this.updateUserUI();
   },
 
@@ -155,8 +301,9 @@ export const app = {
       const data = await res.json();
       if (data.success) {
         this.state.authToken = data.token;
-        localStorage.setItem('bookgram_token', data.token);
+        this.setToken(data.token);
         this.setCurrentUser(data.user);
+        this.showMainApp();
         await this.fetchReviews();
         await this.fetchSuggestedUsers();
         if (notify) this.toast(`Switched account to ${data.user.name}`, 'success');
@@ -164,6 +311,11 @@ export const app = {
     } catch (err) {
       console.error('Switch demo error:', err);
     }
+  },
+
+  async quickLoginDemo(userId) {
+    await this.quickSwitchDemo(userId, false);
+    this.toast(`Signed in as ${this.state.currentUser.name}!`, 'success');
   },
 
   openAuthModal(mode = 'login') {
@@ -196,6 +348,66 @@ export const app = {
     }
   },
 
+  // Handler for Instagram Login Form
+  async handleInstaLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('instaLoginUsername').value.trim();
+    const password = document.getElementById('instaLoginPassword').value;
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.state.authToken = data.token;
+        this.setToken(data.token);
+        this.setCurrentUser(data.user);
+        this.showMainApp();
+        await this.fetchReviews();
+        this.toast(`Welcome back, ${data.user.name}!`, 'success');
+      } else {
+        this.toast(data.message || 'Login failed', 'error');
+      }
+    } catch {
+      this.toast('Connection error during login', 'error');
+    }
+  },
+
+  // Handler for Instagram Register Form
+  async handleInstaRegister(e) {
+    e.preventDefault();
+    const name = document.getElementById('instaRegName').value.trim();
+    const username = document.getElementById('instaRegUsername').value.trim();
+    const email = document.getElementById('instaRegEmail').value.trim();
+    const password = document.getElementById('instaRegPassword').value;
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username, email, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.state.authToken = data.token;
+        this.setToken(data.token);
+        this.setCurrentUser(data.user);
+        this.showMainApp();
+        await this.fetchReviews();
+        this.toast(`Welcome to BookWorm, ${data.user.name}!`, 'success');
+      } else {
+        const errorMsg = data.errors ? data.errors.join(' ') : data.message;
+        this.toast(errorMsg || 'Registration failed', 'error');
+      }
+    } catch {
+      this.toast('Connection error during registration', 'error');
+    }
+  },
+
+  // Handler for Modal Login Form
   async handleLogin(e) {
     e.preventDefault();
     const username = document.getElementById('loginUsername').value.trim();
@@ -210,9 +422,10 @@ export const app = {
       const data = await res.json();
       if (data.success) {
         this.state.authToken = data.token;
-        localStorage.setItem('bookgram_token', data.token);
+        this.setToken(data.token);
         this.setCurrentUser(data.user);
         this.closeAuthModal();
+        this.showMainApp();
         await this.fetchReviews();
         this.toast(`Welcome back, ${data.user.name}!`, 'success');
       } else {
@@ -223,6 +436,7 @@ export const app = {
     }
   },
 
+  // Handler for Modal Register Form
   async handleRegister(e) {
     e.preventDefault();
     const name = document.getElementById('regName').value.trim();
@@ -239,11 +453,12 @@ export const app = {
       const data = await res.json();
       if (data.success) {
         this.state.authToken = data.token;
-        localStorage.setItem('bookgram_token', data.token);
+        this.setToken(data.token);
         this.setCurrentUser(data.user);
         this.closeAuthModal();
+        this.showMainApp();
         await this.fetchReviews();
-        this.toast(`Welcome to BookGram, ${data.user.name}!`, 'success');
+        this.toast(`Welcome to BookWorm, ${data.user.name}!`, 'success');
       } else {
         const errorMsg = data.errors ? data.errors.join(' ') : data.message;
         this.toast(errorMsg || 'Registration failed', 'error');
@@ -262,10 +477,11 @@ export const app = {
     } catch (e) {
       console.warn(e);
     }
-    localStorage.removeItem('bookgram_token');
-    localStorage.removeItem('bookgram_cached_user');
+    this.removeToken();
+    this.state.authToken = null;
+    this.state.currentUser = null;
     this.toast('Logged out successfully', 'info');
-    await this.restoreAuthSession();
+    this.showAuthView('login');
   },
 
   // ==========================================
@@ -1029,7 +1245,7 @@ export const app = {
         e.target.reset();
         this.setRating(5);
         await this.fetchReviews();
-        this.toast('Review published to BookGram!', 'success');
+        this.toast('Review published to BookWorm!', 'success');
       } else {
         const errorMsg = data.errors ? data.errors.join(' ') : data.message;
         this.toast(errorMsg || 'Could not publish review', 'error');
@@ -1043,14 +1259,15 @@ export const app = {
 
   // Offline Draft Queue
   queueOfflineReview(reviewData) {
-    const queue = JSON.parse(localStorage.getItem('bookgram_offline_reviews') || '[]');
+    const queue = JSON.parse(localStorage.getItem('bookworm_offline_reviews') || localStorage.getItem('bookgram_offline_reviews') || '[]');
     queue.push({ ...reviewData, queuedAt: Date.now() });
+    localStorage.setItem('bookworm_offline_reviews', JSON.stringify(queue));
     localStorage.setItem('bookgram_offline_reviews', JSON.stringify(queue));
   },
 
   async syncOfflineQueue() {
     if (!navigator.onLine) return;
-    const queue = JSON.parse(localStorage.getItem('bookgram_offline_reviews') || '[]');
+    const queue = JSON.parse(localStorage.getItem('bookworm_offline_reviews') || localStorage.getItem('bookgram_offline_reviews') || '[]');
     if (queue.length === 0) return;
 
     this.toast(`Syncing ${queue.length} offline review(s)...`, 'info');
@@ -1073,6 +1290,7 @@ export const app = {
       }
     }
 
+    localStorage.setItem('bookworm_offline_reviews', JSON.stringify(remaining));
     localStorage.setItem('bookgram_offline_reviews', JSON.stringify(remaining));
     if (remaining.length === 0) {
       this.toast('All offline reviews synchronized!', 'success');
@@ -2051,7 +2269,7 @@ export const app = {
     if (navigator.share) {
       navigator.share({
         title: `${post.bookTitle} — Review by ${post.author.name}`,
-        text: `Read this critique of ${post.bookTitle} on BookGram:`,
+        text: `Read this critique of ${post.bookTitle} on BookWorm:`,
         url
       }).catch(() => {});
     } else if (navigator.clipboard) {

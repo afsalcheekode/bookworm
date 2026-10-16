@@ -1,6 +1,6 @@
-# BookGram — Secure, Production-Grade Social Book Review Network & PWA
+# BookWorm — Secure, Production-Grade Social Book Review Network & PWA
 
-**BookGram** is an advanced, production-grade Progressive Web App (PWA) and social platform for readers and literary critics. It combines an editorial aesthetic with rigorous security hardening, offline-first resilience, and real-time social networking.
+**BookWorm** is an advanced, production-grade Progressive Web App (PWA) and social platform for readers and literary critics. It combines an editorial aesthetic with rigorous security hardening, offline-first resilience, and real-time social networking.
 
 ---
 
@@ -113,7 +113,7 @@ f:\bookworm\
 │   ├── validator.js        # Strict input validation schemas
 │   └── bookSearch.js       # Open Library book lookup proxy with in-memory caching
 ├── public/
-│   ├── index.html          # Main responsive BookGram application
+│   ├── index.html          # Main responsive BookWorm application
 │   ├── offline.html        # Graceful offline fallback page
 │   ├── sw.js               # PWA Service Worker (App shell, Stale-While-Revalidate)
 │   ├── manifest.webmanifest# PWA Web App Manifest
