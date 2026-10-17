@@ -14,8 +14,13 @@ const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 3000;
 
-// Initialize database
-await initDatabase();
+// Initialize database safely
+try {
+  await initDatabase();
+  console.log(`[DB] Database connected and initialized (${db.isCloud ? 'Turso Cloud' : 'Local SQLite'})`);
+} catch (err) {
+  console.error('[DB] Database initialization notice:', err.message);
+}
 
 // MIME Types map
 const MIME_TYPES = {
@@ -843,11 +848,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
   console.log(`   BookWorm PWA — Real-World Social Review Network`);
   console.log(`   Database: ${db.isCloud ? 'Turso Cloud SQLite (Hosted Outside Local PC)' : 'Local SQLite'}`);
-  console.log(`   Server listening securely at http://localhost:${PORT}`);
+  console.log(`   Server listening securely at http://0.0.0.0:${PORT}`);
   console.log(`======================================================\n`);
 });
 

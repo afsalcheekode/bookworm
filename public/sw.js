@@ -3,8 +3,8 @@
  * Robust offline-first caching & Progressive Web App resilience
  */
 
-const STATIC_CACHE = 'bookworm-static-v6';
-const DATA_CACHE = 'bookworm-data-v6';
+const STATIC_CACHE = 'bookworm-static-v8';
+const DATA_CACHE = 'bookworm-data-v8';
 
 const PRECACHE_ASSETS = [
   '/',
