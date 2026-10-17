@@ -15,7 +15,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 3000;
 
 // Initialize database
-initDatabase();
+await initDatabase();
 
 // MIME Types map
 const MIME_TYPES = {
@@ -59,7 +59,7 @@ function parseJsonBody(req, maxSize = 256 * 1024) {
 }
 
 // Request Helper: Get Auth User
-function authenticateRequest(req) {
+async function authenticateRequest(req) {
   // Check Authorization header first
   const authHeader = req.headers['authorization'];
   let token = null;
@@ -78,7 +78,7 @@ function authenticateRequest(req) {
   }
 
   if (!token) return null;
-  return getSessionUser(token);
+  return await getSessionUser(token);
 }
 
 // Response Helpers
@@ -119,7 +119,7 @@ const server = http.createServer(async (req, res) => {
     // API ROUTES
     // ==========================================
     if (pathname.startsWith('/api/')) {
-      const user = authenticateRequest(req);
+      const user = await authenticateRequest(req);
 
       // --- Health Check ---
       if (pathname === '/api/health' && method === 'GET') {
@@ -127,6 +127,7 @@ const server = http.createServer(async (req, res) => {
           status: 'healthy',
           app: 'BookWorm',
           version: '1.0.0',
+          database: db.isCloud ? 'Turso Cloud SQLite' : 'Local SQLite',
           timestamp: new Date().toISOString()
         });
       }
@@ -143,7 +144,7 @@ const server = http.createServer(async (req, res) => {
         const handle = `@${username}`;
 
         // Check uniqueness
-        const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email);
+        const existing = await db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email);
         if (existing) {
           return sendError(res, 409, 'Username or email already in use');
         }
@@ -153,12 +154,12 @@ const server = http.createServer(async (req, res) => {
         const pwdHash = hashPassword(body.password, salt);
         const avatar = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80`;
 
-        db.prepare(`
+        await db.prepare(`
           INSERT INTO users (id, username, email, password_hash, salt, name, handle, bio, avatar)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(userId, username, email, pwdHash, salt, name, handle, 'Avid reader and reviewer.', avatar);
 
-        const session = createSession(userId);
+        const session = await createSession(userId);
 
         const isProd = process.env.NODE_ENV === 'production';
         const cookieFlags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isProd ? '; Secure' : ''}`;
@@ -180,13 +181,13 @@ const server = http.createServer(async (req, res) => {
         if (!isValid) return sendError(res, 400, 'Validation failed', errors);
 
         const identifier = body.username.trim().toLowerCase();
-        const row = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(identifier, identifier);
+        const row = await db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(identifier, identifier);
 
         if (!row || !verifyPassword(body.password, row.password_hash, row.salt)) {
           return sendError(res, 401, 'Invalid username or password');
         }
 
-        const session = createSession(row.id);
+        const session = await createSession(row.id);
         const isProd = process.env.NODE_ENV === 'production';
         const cookieFlags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isProd ? '; Secure' : ''}`;
         res.setHeader('Set-Cookie', [
@@ -213,17 +214,21 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/auth/me' && method === 'GET') {
         if (!user) return sendError(res, 401, 'Not authenticated');
 
-        const followersCount = db.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').get(user.id).count;
-        const followingCount = db.prepare('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?').get(user.id).count;
-        const reviewsCount = db.prepare('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?').get(user.id).count;
-        const followingRows = db.prepare('SELECT following_id FROM follows WHERE follower_id = ?').all(user.id);
-        const savedRows = db.prepare('SELECT review_id FROM saves WHERE user_id = ?').all(user.id);
+        const followersRow = await db.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').get(user.id);
+        const followingRow = await db.prepare('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?').get(user.id);
+        const reviewsRow = await db.prepare('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?').get(user.id);
+        const followingRows = await db.prepare('SELECT following_id FROM follows WHERE follower_id = ?').all(user.id);
+        const savedRows = await db.prepare('SELECT review_id FROM saves WHERE user_id = ?').all(user.id);
 
         return sendJson(res, 200, {
           success: true,
           user: {
             ...user,
-            stats: { reviewsCount, followersCount, followingCount },
+            stats: {
+              reviewsCount: reviewsRow ? reviewsRow.count : 0,
+              followersCount: followersRow ? followersRow.count : 0,
+              followingCount: followingRow ? followingRow.count : 0
+            },
             followingIds: followingRows.map(r => r.following_id),
             savedReviewIds: savedRows.map(r => r.review_id)
           }
@@ -240,7 +245,7 @@ const server = http.createServer(async (req, res) => {
           });
         }
         const currentUserId = user ? user.id : '';
-        const existing = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(queryUsername, currentUserId);
+        const existing = await db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(queryUsername, currentUserId);
         return sendJson(res, 200, {
           available: !existing,
           message: existing ? `Username @${queryUsername} is already taken` : `Username @${queryUsername} is available`
@@ -262,7 +267,7 @@ const server = http.createServer(async (req, res) => {
           }
 
           if (trimmedUsername !== (user.username || '').toLowerCase()) {
-            const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(trimmedUsername, user.id);
+            const existingUser = await db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(trimmedUsername, user.id);
             if (existingUser) {
               return sendError(res, 409, `Username @${trimmedUsername} is already taken by another reader`);
             }
@@ -278,7 +283,7 @@ const server = http.createServer(async (req, res) => {
           avatar = body.avatar.trim();
         }
 
-        db.prepare('UPDATE users SET username = ?, handle = ?, name = ?, bio = ?, avatar = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET username = ?, handle = ?, name = ?, bio = ?, avatar = ? WHERE id = ?')
           .run(newUsername, newHandle, name, bio, avatar, user.id);
 
         const updatedUser = { ...user, username: newUsername, handle: newHandle, name, bio, avatar };
@@ -294,7 +299,7 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/auth/logout' && method === 'POST') {
         const authHeader = req.headers['authorization'];
         if (authHeader && authHeader.startsWith('Bearer ')) {
-          revokeSession(authHeader.slice(7).trim());
+          await revokeSession(authHeader.slice(7).trim());
         }
         res.setHeader('Set-Cookie', [
           'bookworm_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
@@ -366,12 +371,13 @@ const server = http.createServer(async (req, res) => {
         query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
         params.push(limit, offset);
 
-        const rows = db.prepare(query).all(...params);
+        const rows = await db.prepare(query).all(...params);
 
-        // Fetch likes, saves and comments for these reviews
-        const reviewsWithDetails = rows.map(r => {
-          const likes = db.prepare('SELECT user_id FROM likes WHERE review_id = ?').all(r.id).map(l => l.user_id);
-          const comments = db.prepare(`
+        // Fetch likes, saves and comments for these reviews in parallel
+        const reviewsWithDetails = await Promise.all(rows.map(async r => {
+          const likesRows = await db.prepare('SELECT user_id FROM likes WHERE review_id = ?').all(r.id);
+          const likes = likesRows.map(l => l.user_id);
+          const comments = await db.prepare(`
             SELECT c.id, c.user_id, c.text, c.created_at, u.name, u.handle, u.avatar
             FROM comments c
             JOIN users u ON u.id = c.user_id
@@ -400,7 +406,7 @@ const server = http.createServer(async (req, res) => {
             likes,
             comments
           };
-        });
+        }));
 
         return sendJson(res, 200, { success: true, count: reviewsWithDetails.length, reviews: reviewsWithDetails });
       }
@@ -416,7 +422,7 @@ const server = http.createServer(async (req, res) => {
         const reviewId = 'rev_' + Date.now() + '_' + randomBytes(4).toString('hex');
         const quoteFormatted = body.quote ? `“${sanitizeText(body.quote.replace(/["“”]/g, '').trim())}”` : null;
 
-        db.prepare(`
+        await db.prepare(`
           INSERT INTO reviews (id, user_id, book_title, book_author, cover_url, genre, rating, review_text, quote, book_link)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
@@ -443,7 +449,7 @@ const server = http.createServer(async (req, res) => {
       const singleReviewMatch = pathname.match(/^\/api\/reviews\/([^/]+)$/);
       if (singleReviewMatch && method === 'GET') {
         const reviewId = singleReviewMatch[1];
-        const row = db.prepare(`
+        const row = await db.prepare(`
           SELECT 
             r.id, r.user_id, r.book_title, r.book_author, r.cover_url, r.genre, 
             r.rating, r.review_text, r.quote, r.book_link, r.created_at,
@@ -455,8 +461,9 @@ const server = http.createServer(async (req, res) => {
 
         if (!row) return sendError(res, 404, 'Review not found');
 
-        const likes = db.prepare('SELECT user_id FROM likes WHERE review_id = ?').all(reviewId).map(l => l.user_id);
-        const comments = db.prepare(`
+        const likesRows = await db.prepare('SELECT user_id FROM likes WHERE review_id = ?').all(reviewId);
+        const likes = likesRows.map(l => l.user_id);
+        const comments = await db.prepare(`
           SELECT c.id, c.user_id, c.text, c.created_at, u.name, u.avatar
           FROM comments c
           JOIN users u ON u.id = c.user_id
@@ -465,13 +472,17 @@ const server = http.createServer(async (req, res) => {
         `).all(reviewId);
 
         const currentUserId = user ? user.id : null;
-        const isFollowing = (currentUserId && currentUserId !== row.user_id)
-          ? !!db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(currentUserId, row.user_id)
-          : false;
+        let isFollowing = false;
+        if (currentUserId && currentUserId !== row.user_id) {
+          const followRow = await db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(currentUserId, row.user_id);
+          isFollowing = Boolean(followRow);
+        }
 
-        const isSaved = currentUserId
-          ? !!db.prepare('SELECT 1 FROM saves WHERE user_id = ? AND review_id = ?').get(currentUserId, reviewId)
-          : false;
+        let isSaved = false;
+        if (currentUserId) {
+          const saveRow = await db.prepare('SELECT 1 FROM saves WHERE user_id = ? AND review_id = ?').get(currentUserId, reviewId);
+          isSaved = Boolean(saveRow);
+        }
 
         return sendJson(res, 200, {
           success: true,
@@ -506,7 +517,7 @@ const server = http.createServer(async (req, res) => {
         if (!user) return sendError(res, 401, 'Not authenticated');
         const reviewId = deleteReviewMatch[1];
 
-        const existing = db.prepare('SELECT user_id FROM reviews WHERE id = ?').get(reviewId);
+        const existing = await db.prepare('SELECT user_id FROM reviews WHERE id = ?').get(reviewId);
         if (!existing) return sendError(res, 404, 'Review not found');
 
         // Authorization check: Only author can delete review
@@ -514,7 +525,7 @@ const server = http.createServer(async (req, res) => {
           return sendError(res, 403, 'You are not authorized to delete this review');
         }
 
-        db.prepare('DELETE FROM reviews WHERE id = ?').run(reviewId);
+        await db.prepare('DELETE FROM reviews WHERE id = ?').run(reviewId);
         return sendJson(res, 200, { success: true, message: 'Review deleted' });
       }
 
@@ -524,18 +535,19 @@ const server = http.createServer(async (req, res) => {
         if (!user) return sendError(res, 401, 'Please log in to like reviews');
         const reviewId = likeMatch[1];
 
-        const exists = db.prepare('SELECT 1 FROM likes WHERE user_id = ? AND review_id = ?').get(user.id, reviewId);
+        const exists = await db.prepare('SELECT 1 FROM likes WHERE user_id = ? AND review_id = ?').get(user.id, reviewId);
         let isLiked = false;
 
         if (exists) {
-          db.prepare('DELETE FROM likes WHERE user_id = ? AND review_id = ?').run(user.id, reviewId);
+          await db.prepare('DELETE FROM likes WHERE user_id = ? AND review_id = ?').run(user.id, reviewId);
           isLiked = false;
         } else {
-          db.prepare('INSERT INTO likes (user_id, review_id) VALUES (?, ?)').run(user.id, reviewId);
+          await db.prepare('INSERT INTO likes (user_id, review_id) VALUES (?, ?)').run(user.id, reviewId);
           isLiked = true;
         }
 
-        const totalLikes = db.prepare('SELECT COUNT(*) as count FROM likes WHERE review_id = ?').get(reviewId).count;
+        const totalLikesRow = await db.prepare('SELECT COUNT(*) as count FROM likes WHERE review_id = ?').get(reviewId);
+        const totalLikes = totalLikesRow ? totalLikesRow.count : 0;
         return sendJson(res, 200, { success: true, isLiked, totalLikes });
       }
 
@@ -545,14 +557,14 @@ const server = http.createServer(async (req, res) => {
         if (!user) return sendError(res, 401, 'Please log in to save books');
         const reviewId = saveMatch[1];
 
-        const exists = db.prepare('SELECT 1 FROM saves WHERE user_id = ? AND review_id = ?').get(user.id, reviewId);
+        const exists = await db.prepare('SELECT 1 FROM saves WHERE user_id = ? AND review_id = ?').get(user.id, reviewId);
         let isSaved = false;
 
         if (exists) {
-          db.prepare('DELETE FROM saves WHERE user_id = ? AND review_id = ?').run(user.id, reviewId);
+          await db.prepare('DELETE FROM saves WHERE user_id = ? AND review_id = ?').run(user.id, reviewId);
           isSaved = false;
         } else {
-          db.prepare('INSERT INTO saves (user_id, review_id) VALUES (?, ?)').run(user.id, reviewId);
+          await db.prepare('INSERT INTO saves (user_id, review_id) VALUES (?, ?)').run(user.id, reviewId);
           isSaved = true;
         }
 
@@ -565,7 +577,7 @@ const server = http.createServer(async (req, res) => {
         if (!user) return sendError(res, 401, 'Please log in to leave a comment');
         const reviewId = commentMatch[1];
 
-        const reviewExists = db.prepare('SELECT id FROM reviews WHERE id = ?').get(reviewId);
+        const reviewExists = await db.prepare('SELECT id FROM reviews WHERE id = ?').get(reviewId);
         if (!reviewExists) return sendError(res, 404, 'Review not found');
 
         const body = await parseJsonBody(req);
@@ -575,7 +587,7 @@ const server = http.createServer(async (req, res) => {
         const commentId = 'c_' + Date.now() + '_' + randomBytes(3).toString('hex');
         const cleanText = sanitizeText(body.text.trim());
 
-        db.prepare('INSERT INTO comments (id, review_id, user_id, text) VALUES (?, ?, ?, ?)').run(
+        await db.prepare('INSERT INTO comments (id, review_id, user_id, text) VALUES (?, ?, ?, ?)').run(
           commentId,
           reviewId,
           user.id,
@@ -600,9 +612,9 @@ const server = http.createServer(async (req, res) => {
       const delCommentMatch = pathname.match(/^\/api\/reviews\/([^/]+)\/comments\/([^/]+)$/);
       if (delCommentMatch && method === 'DELETE') {
         if (!user) return sendError(res, 401, 'Not authenticated');
-        const [, reviewId, commentId] = delCommentMatch;
+        const [, , commentId] = delCommentMatch;
 
-        const comment = db.prepare('SELECT c.user_id as comment_user_id, r.user_id as review_user_id FROM comments c JOIN reviews r ON r.id = c.review_id WHERE c.id = ?').get(commentId);
+        const comment = await db.prepare('SELECT c.user_id as comment_user_id, r.user_id as review_user_id FROM comments c JOIN reviews r ON r.id = c.review_id WHERE c.id = ?').get(commentId);
         if (!comment) return sendError(res, 404, 'Comment not found');
 
         // Only comment author OR review owner can delete
@@ -610,14 +622,14 @@ const server = http.createServer(async (req, res) => {
           return sendError(res, 403, 'Not authorized to delete this comment');
         }
 
-        db.prepare('DELETE FROM comments WHERE id = ?').run(commentId);
+        await db.prepare('DELETE FROM comments WHERE id = ?').run(commentId);
         return sendJson(res, 200, { success: true, message: 'Comment deleted' });
       }
 
       // --- USERS: Suggested Readers ---
       if (pathname === '/api/users/suggested' && method === 'GET') {
         const currentUserId = user ? user.id : '';
-        const suggested = db.prepare(`
+        const suggested = await db.prepare(`
           SELECT id, name, handle, bio, avatar,
             (SELECT COUNT(*) FROM follows WHERE following_id = users.id) as followers_count
           FROM users
@@ -633,16 +645,20 @@ const server = http.createServer(async (req, res) => {
       const userProfileMatch = pathname.match(/^\/api\/users\/([^/]+)$/);
       if (userProfileMatch && method === 'GET') {
         const targetId = userProfileMatch[1];
-        const profileUser = db.prepare('SELECT id, name, handle, bio, avatar, created_at FROM users WHERE id = ?').get(targetId);
+        const profileUser = await db.prepare('SELECT id, name, handle, bio, avatar, created_at FROM users WHERE id = ?').get(targetId);
         if (!profileUser) return sendError(res, 404, 'User not found');
 
-        const reviewsCount = db.prepare('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?').get(targetId).count;
-        const followersCount = db.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').get(targetId).count;
-        const followingCount = db.prepare('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?').get(targetId).count;
+        const reviewsRow = await db.prepare('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?').get(targetId);
+        const followersRow = await db.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').get(targetId);
+        const followingRow = await db.prepare('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?').get(targetId);
 
-        const isFollowing = user ? !!db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(user.id, targetId) : false;
+        let isFollowing = false;
+        if (user) {
+          const followRow = await db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(user.id, targetId);
+          isFollowing = Boolean(followRow);
+        }
 
-        const userReviews = db.prepare(`
+        const userReviews = await db.prepare(`
           SELECT id, book_title, book_author, cover_url, genre, rating, book_link, created_at,
             (SELECT COUNT(*) FROM likes WHERE review_id = reviews.id) as likes_count,
             (SELECT COUNT(*) FROM comments WHERE review_id = reviews.id) as comments_count
@@ -654,7 +670,7 @@ const server = http.createServer(async (req, res) => {
         let likedReviews = [];
         // Privacy: only the account owner can view their private Favorites & Likes
         if (user && user.id === targetId) {
-          likedReviews = db.prepare(`
+          likedReviews = await db.prepare(`
             SELECT r.id, r.book_title, r.book_author, r.cover_url, r.genre, r.rating, r.book_link, r.created_at,
               (SELECT COUNT(*) FROM likes WHERE review_id = r.id) as likes_count,
               (SELECT COUNT(*) FROM comments WHERE review_id = r.id) as comments_count
@@ -669,7 +685,11 @@ const server = http.createServer(async (req, res) => {
           success: true,
           user: {
             ...profileUser,
-            stats: { reviewsCount, followersCount, followingCount },
+            stats: {
+              reviewsCount: reviewsRow ? reviewsRow.count : 0,
+              followersCount: followersRow ? followersRow.count : 0,
+              followingCount: followingRow ? followingRow.count : 0
+            },
             isFollowing,
             reviews: userReviews,
             likedReviews
@@ -687,27 +707,28 @@ const server = http.createServer(async (req, res) => {
           return sendError(res, 400, 'Cannot follow yourself');
         }
 
-        const targetExists = db.prepare('SELECT id FROM users WHERE id = ?').get(targetId);
+        const targetExists = await db.prepare('SELECT id FROM users WHERE id = ?').get(targetId);
         if (!targetExists) return sendError(res, 404, 'User not found');
 
-        const existingFollow = db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(user.id, targetId);
+        const existingFollow = await db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(user.id, targetId);
         let isFollowing = false;
 
         if (existingFollow) {
-          db.prepare('DELETE FROM follows WHERE follower_id = ? AND following_id = ?').run(user.id, targetId);
+          await db.prepare('DELETE FROM follows WHERE follower_id = ? AND following_id = ?').run(user.id, targetId);
           isFollowing = false;
         } else {
-          db.prepare('INSERT INTO follows (follower_id, following_id) VALUES (?, ?)').run(user.id, targetId);
+          await db.prepare('INSERT INTO follows (follower_id, following_id) VALUES (?, ?)').run(user.id, targetId);
           isFollowing = true;
         }
 
-        const followersCount = db.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').get(targetId).count;
+        const followersRow = await db.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').get(targetId);
+        const followersCount = followersRow ? followersRow.count : 0;
         return sendJson(res, 200, { success: true, isFollowing, followersCount });
       }
 
       // --- BOOKS: Featured / Book of the Week ---
       if (pathname === '/api/books/featured' && method === 'GET') {
-        const row = db.prepare(`
+        const row = await db.prepare(`
           SELECT 
             r.book_title,
             r.book_author,
@@ -825,6 +846,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
   console.log(`   BookWorm PWA — Real-World Social Review Network`);
+  console.log(`   Database: ${db.isCloud ? 'Turso Cloud SQLite (Hosted Outside Local PC)' : 'Local SQLite'}`);
   console.log(`   Server listening securely at http://localhost:${PORT}`);
   console.log(`======================================================\n`);
 });
