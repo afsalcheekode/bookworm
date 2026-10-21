@@ -95,6 +95,26 @@ All pre-seeded demo accounts share the password: `Password123!`
 | `POST` | `/api/users/:id/follow` | Follow / Unfollow user | Yes |
 | `GET` | `/api/users/suggested` | List suggested readers to follow | Optional |
 | `GET` | `/api/books/search?q=:query` | Live Open Library book autocomplete | No |
+| `POST` | `/api/admin/login` | Authenticate with master key or admin account | No |
+| `GET` | `/api/admin/stats` | Platform statistics, health & database metrics | Admin |
+| `GET` / `POST` | `/api/admin/users` | List with search or create new user account | Admin |
+| `PUT` / `DELETE`| `/api/admin/users/:id` | Edit profile, role, password, or delete user | Admin |
+| `GET` / `POST` | `/api/admin/reviews` | List with search/filter or create new post | Admin |
+| `PUT` / `DELETE`| `/api/admin/reviews/:id`| Edit details, rating, or delete review post | Admin |
+| `GET` | `/api/admin/comments` | List all platform comments with search | Admin |
+| `PUT` / `DELETE`| `/api/admin/comments/:id`| Edit comment text or delete comment | Admin |
+
+---
+
+## 🛡️ Administrative Console (`/admin`)
+
+BookWorm includes a dedicated management portal accessible at **`/admin`** to control all platform operations:
+
+- **Authentication:** Access via Master Admin Secret Passkey (`ADMIN_SECRET`, default `bookworm_admin_2026`) or any user account with `is_admin = 1`.
+- **Account Control:** Add, edit name/email/bio, toggle Admin role, reset passwords, or delete user accounts (with full data cascades).
+- **Post & Review Control:** Create reviews on behalf of any reader, edit book metadata/ratings/quotes, and remove reviews.
+- **Comment Moderation:** Real-time search, inline editing, and deletion of comments.
+- **System Monitoring:** Live counts of users, reviews, comments, likes, and cloud database engine health.
 
 ---
 
@@ -106,13 +126,16 @@ f:\bookworm\
 ├── package.json            # Scripts and metadata
 ├── test_suite.js           # Automated integration & security test suite
 ├── lib/
-│   ├── db.js               # SQLite setup, schema migrations, and seed data
+│   ├── db.js               # SQLite & Turso setup, migrations, and seed data
+│   ├── admin.js            # Admin backend controller & RBAC security
 │   ├── auth.js             # scrypt hashing, timing-safe checks, token hashing
 │   ├── security.js         # Security headers (CSP, X-Frame-Options), SSRF & rate limiters
 │   ├── validator.js        # Strict input validation schemas
 │   └── bookSearch.js       # Open Library book lookup proxy with in-memory caching
 ├── public/
 │   ├── index.html          # Main responsive BookWorm application
+│   ├── admin.html          # Dedicated Administrator Dashboard & Console
+│   ├── admin.js            # Admin portal frontend controller & state
 │   ├── offline.html        # Graceful offline fallback page
 │   ├── sw.js               # PWA Service Worker (App shell, Stale-While-Revalidate)
 │   ├── manifest.webmanifest# PWA Web App Manifest

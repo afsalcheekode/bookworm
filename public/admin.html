@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookWorm — Administrator Console</title>
+  
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#c73e28">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fdf4f0',
+              100: '#fae6dc',
+              500: '#e0533c',
+              600: '#c73e28',
+              700: '#9e2b19',
+            },
+            adminDark: '#0c0e12',
+            cardDark: '#14171f',
+            borderDark: '#232834',
+          },
+          fontFamily: {
+            serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    .glass-card {
+      background: rgba(20, 23, 31, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #2b3140;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-adminDark text-slate-100 min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ============================================================ -->
+  <!-- TOAST NOTIFICATIONS CONTAINER -->
+  <!-- ============================================================ -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- ============================================================ -->
+  <!-- 1. ADMIN LOGIN VIEW -->
+  <!-- ============================================================ -->
+  <div id="adminLoginView" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md glass-card rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand-600/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white mx-auto shadow-xl shadow-brand-600/30 mb-4">
+          <i class="fa-solid fa-shield-halved text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">BookWorm Admin</h1>
+        <p class="text-xs text-slate-400 mt-1">Master Control & Content Management Portal</p>
+      </div>
+
+      <!-- Auth Mode Switcher -->
+      <div class="grid grid-cols-2 gap-1 p-1 bg-black/40 rounded-xl mb-6 text-xs font-semibold">
+        <button type="button" id="tabMasterKeyBtn" onclick="switchLoginMode('master')" class="py-2 rounded-lg bg-brand-600 text-white transition">
+          <i class="fa-solid fa-key mr-1"></i> Master Passkey
+        </button>
+        <button type="button" id="tabAccountBtn" onclick="switchLoginMode('account')" class="py-2 rounded-lg text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-user-shield mr-1"></i> Admin Account
+        </button>
+      </div>
+
+      <!-- Form A: Master Passkey -->
+      <form id="masterKeyForm" onsubmit="handleMasterKeyLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Master Secret Passkey</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+            <input 
+              type="password" 
+              id="adminSecretKeyInput" 
+              required 
+              placeholder="Enter ADMIN_SECRET passkey..." 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none transition text-white placeholder-slate-500"
+            >
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1.5">
+            Default passkey: <code class="text-brand-400 font-mono">bookworm_admin_2026</code> (or your custom <code class="text-brand-400">ADMIN_SECRET</code>).
+          </p>
+        </div>
+
+        <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-sm text-white shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Authenticate & Enter
+        </button>
+      </form>
+
+      <!-- Form B: Admin Account Login -->
+      <form id="accountLoginForm" onsubmit="handleAccountLogin(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Admin Username or Email</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+            <input 
+              type="text" 
+              id="adminUsernameInput" 
+              required 
+              placeholder="admin@bookworm.network" 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none transition text-white placeholder-slate-500"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+            <input 
+              type="password" 
+              id="adminPasswordInput" 
+              required 
+              placeholder="••••••••" 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none transition text-white placeholder-slate-500"
+            >
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-sm text-white shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Log In as Admin
+        </button>
+      </form>
+
+      <div class="mt-6 pt-5 border-t border-borderDark/60 flex items-center justify-between text-xs text-slate-400">
+        <a href="/" class="hover:text-white transition flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-left"></i> Return to Main App
+        </a>
+        <span class="text-[11px] text-slate-500">BookWorm Core v1.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 2. MAIN ADMIN DASHBOARD VIEW (Shown when authenticated) -->
+  <!-- ============================================================ -->
+  <div id="adminDashboardView" class="hidden min-h-screen flex flex-col">
+    
+    <!-- Top Navigation Bar -->
+    <header class="glass-card border-b border-borderDark sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-brand-600/30">
+          <i class="fa-solid fa-shield-halved text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-bold tracking-tight text-white">BookWorm Admin</h1>
+            <span id="dbBadge" class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <i class="fa-solid fa-circle text-[6px] mr-1 animate-pulse"></i> Online
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Full Administrative & Content Control</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="/" target="_blank" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cardDark hover:bg-borderDark border border-borderDark text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <i class="fa-solid fa-external-link text-[11px]"></i> <span class="hidden sm:inline">Open Live App</span>
+        </a>
+        <button onclick="handleAdminLogout()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs Bar -->
+    <div class="bg-[#10131a] border-b border-borderDark px-4 sm:px-8 flex items-center gap-2 sm:gap-4 overflow-x-auto custom-scroll text-sm font-semibold">
+      <button onclick="setActiveTab('overview')" id="tabBtn-overview" class="tab-btn px-4 py-3 border-b-2 border-brand-500 text-white flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-chart-pie text-brand-400"></i> Dashboard Overview
+      </button>
+      <button onclick="setActiveTab('users')" id="tabBtn-users" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-users"></i> Accounts & Users <span id="usersCountBadge" class="text-[11px] px-1.5 py-0.2 rounded-full bg-borderDark text-slate-300">0</span>
+      </button>
+      <button onclick="setActiveTab('posts')" id="tabBtn-posts" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-book-open"></i> Posts & Reviews <span id="postsCountBadge" class="text-[11px] px-1.5 py-0.2 rounded-full bg-borderDark text-slate-300">0</span>
+      </button>
+      <button onclick="setActiveTab('comments')" id="tabBtn-comments" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-comments"></i> Comments <span id="commentsCountBadge" class="text-[11px] px-1.5 py-0.2 rounded-full bg-borderDark text-slate-300">0</span>
+      </button>
+    </div>
+
+    <!-- Main Content Workspace -->
+    <main class="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+      
+      <!-- ============================================== -->
+      <!-- TAB 1: OVERVIEW & SYSTEM STATS -->
+      <!-- ============================================== -->
+      <section id="tabContent-overview" class="space-y-8">
+        <!-- KPI Metrics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="glass-card rounded-2xl p-5 border border-borderDark/80 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider">Total Accounts</span>
+              <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                <i class="fa-solid fa-users"></i>
+              </div>
+            </div>
+            <div id="statTotalUsers" class="text-3xl font-extrabold text-white">0</div>
+            <div class="text-[11px] text-slate-500 mt-1">Registered Readers & Critics</div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-borderDark/80 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider">Total Posts / Reviews</span>
+              <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-400 flex items-center justify-center">
+                <i class="fa-solid fa-book-open"></i>
+              </div>
+            </div>
+            <div id="statTotalReviews" class="text-3xl font-extrabold text-white">0</div>
+            <div class="text-[11px] text-slate-500 mt-1">Published literary critiques</div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-borderDark/80 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider">Total Comments</span>
+              <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                <i class="fa-solid fa-comments"></i>
+              </div>
+            </div>
+            <div id="statTotalComments" class="text-3xl font-extrabold text-white">0</div>
+            <div class="text-[11px] text-slate-500 mt-1">Community discussions</div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 border border-borderDark/80 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider">Community Likes</span>
+              <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                <i class="fa-solid fa-heart"></i>
+              </div>
+            </div>
+            <div id="statTotalLikes" class="text-3xl font-extrabold text-white">0</div>
+            <div class="text-[11px] text-slate-500 mt-1">Social engagements</div>
+          </div>
+        </div>
+
+        <!-- Infrastructure Status Card -->
+        <div class="glass-card rounded-2xl p-6 border border-borderDark">
+          <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-server text-emerald-400"></i> Cloud Infrastructure Status
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div class="p-3 bg-black/40 rounded-xl border border-borderDark">
+              <span class="text-slate-400 block mb-1">Active Database:</span>
+              <span id="statDatabase" class="font-bold text-white text-sm">Turso Cloud SQLite</span>
+            </div>
+            <div class="p-3 bg-black/40 rounded-xl border border-borderDark">
+              <span class="text-slate-400 block mb-1">Runtime Engine:</span>
+              <span id="statNodeVersion" class="font-bold text-white text-sm">Node.js</span>
+            </div>
+            <div class="p-3 bg-black/40 rounded-xl border border-borderDark">
+              <span class="text-slate-400 block mb-1">Server Uptime:</span>
+              <span id="statUptime" class="font-bold text-white text-sm">Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity Feeds -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Recent Reviews -->
+          <div class="glass-card rounded-2xl p-6 border border-borderDark">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-brand-400"></i> Recent Reviews
+              </h3>
+              <button onclick="setActiveTab('posts')" class="text-xs text-brand-400 hover:underline">Manage All</button>
+            </div>
+            <div id="recentReviewsList" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Recent Users -->
+          <div class="glass-card rounded-2xl p-6 border border-borderDark">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-user-plus text-sky-400"></i> Newly Registered Accounts
+              </h3>
+              <button onclick="setActiveTab('users')" class="text-xs text-brand-400 hover:underline">Manage All</button>
+            </div>
+            <div id="recentUsersList" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 2: ACCOUNTS (USERS) MANAGEMENT -->
+      <!-- ============================================== -->
+      <section id="tabContent-users" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <!-- Search Users -->
+          <div class="relative flex-1 max-w-md">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+            <input 
+              type="text" 
+              id="userSearchInput" 
+              oninput="debounceUserSearch()"
+              placeholder="Search by name, @handle, or email..." 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-black/40 border border-borderDark focus:border-brand-500 focus:outline-none transition text-white placeholder-slate-500"
+            >
+          </div>
+
+          <!-- Add User Button -->
+          <button onclick="openAddUserModal()" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-sm text-white shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-user-plus"></i> Add New Account
+          </button>
+        </div>
+
+        <!-- Users Table -->
+        <div class="glass-card rounded-2xl border border-borderDark overflow-hidden">
+          <div class="overflow-x-auto custom-scroll">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-black/50 border-b border-borderDark text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                <tr>
+                  <th class="py-3.5 px-4">User</th>
+                  <th class="py-3.5 px-4">Email</th>
+                  <th class="py-3.5 px-4">Role</th>
+                  <th class="py-3.5 px-4 text-center">Reviews</th>
+                  <th class="py-3.5 px-4 text-center">Comments</th>
+                  <th class="py-3.5 px-4">Joined</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody" class="divide-y divide-borderDark/60 text-slate-300">
+                <!-- Loaded via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 3: POSTS & REVIEWS MANAGEMENT -->
+      <!-- ============================================== -->
+      <section id="tabContent-posts" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <!-- Search & Filters -->
+          <div class="flex flex-1 items-center gap-3 max-w-xl">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+              <input 
+                type="text" 
+                id="postSearchInput" 
+                oninput="debouncePostSearch()"
+                placeholder="Search reviews by book title, author, or reviewer..." 
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-black/40 border border-borderDark focus:border-brand-500 focus:outline-none transition text-white placeholder-slate-500"
+              >
+            </div>
+            <select id="genreFilterSelect" onchange="loadAdminReviews()" class="px-3 py-2.5 rounded-xl text-sm bg-black/40 border border-borderDark focus:border-brand-500 focus:outline-none text-slate-300">
+              <option value="All">All Genres</option>
+              <option value="Fiction">Fiction</option>
+              <option value="Sci-Fi & Fantasy">Sci-Fi & Fantasy</option>
+              <option value="Mystery & Thriller">Mystery & Thriller</option>
+              <option value="Non-Fiction">Non-Fiction</option>
+              <option value="Classics">Classics</option>
+              <option value="Philosophy">Philosophy</option>
+              <option value="Romance">Romance</option>
+              <option value="Biography">Biography</option>
+              <option value="History">History</option>
+              <option value="Self-Help">Self-Help</option>
+            </select>
+          </div>
+
+          <!-- Create Post Button -->
+          <button onclick="openAddPostModal()" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-sm text-white shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus"></i> Create New Post
+          </button>
+        </div>
+
+        <!-- Posts Table -->
+        <div class="glass-card rounded-2xl border border-borderDark overflow-hidden">
+          <div class="overflow-x-auto custom-scroll">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-black/50 border-b border-borderDark text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                <tr>
+                  <th class="py-3.5 px-4">Book</th>
+                  <th class="py-3.5 px-4">Author / Reviewer</th>
+                  <th class="py-3.5 px-4">Genre</th>
+                  <th class="py-3.5 px-4">Rating</th>
+                  <th class="py-3.5 px-4 text-center">Likes</th>
+                  <th class="py-3.5 px-4 text-center">Comments</th>
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="postsTableBody" class="divide-y divide-borderDark/60 text-slate-300">
+                <!-- Loaded via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 4: COMMENTS MANAGEMENT -->
+      <!-- ============================================== -->
+      <section id="tabContent-comments" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <!-- Search Comments -->
+          <div class="relative flex-1 max-w-md">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+            <input 
+              type="text" 
+              id="commentSearchInput" 
+              oninput="debounceCommentSearch()"
+              placeholder="Search comments by text, commenter, or book..." 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-black/40 border border-borderDark focus:border-brand-500 focus:outline-none transition text-white placeholder-slate-500"
+            >
+          </div>
+        </div>
+
+        <!-- Comments Table -->
+        <div class="glass-card rounded-2xl border border-borderDark overflow-hidden">
+          <div class="overflow-x-auto custom-scroll">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-black/50 border-b border-borderDark text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                <tr>
+                  <th class="py-3.5 px-4">Commenter</th>
+                  <th class="py-3.5 px-4">Book Context</th>
+                  <th class="py-3.5 px-4">Comment Text</th>
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="commentsTableBody" class="divide-y divide-borderDark/60 text-slate-300">
+                <!-- Loaded via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODALS -->
+  <!-- ============================================================ -->
+
+  <!-- Modal 1: User Add / Edit Modal -->
+  <div id="userModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden">
+    <div class="glass-card rounded-2xl w-full max-w-lg p-6 border border-borderDark max-h-[90vh] overflow-y-auto custom-scroll">
+      <div class="flex items-center justify-between mb-5 border-b border-borderDark/60 pb-3">
+        <h3 id="userModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-user-pen text-brand-400"></i> Edit User Account
+        </h3>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="userForm" onsubmit="handleSaveUser(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="editUserId">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Full Name *</label>
+            <input type="text" id="userFormName" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Username *</label>
+            <input type="text" id="userFormUsername" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Address *</label>
+          <input type="email" id="userFormEmail" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <span id="pwdLabelText">Password</span> <span id="pwdHint" class="text-[10px] text-slate-500 normal-case">(leave blank to keep current)</span>
+          </label>
+          <input type="password" id="userFormPassword" placeholder="Minimum 8 characters" class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Bio</label>
+          <textarea id="userFormBio" rows="2" class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Avatar Image URL</label>
+          <input type="url" id="userFormAvatar" placeholder="https://..." class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+        </div>
+
+        <div class="p-3 bg-black/40 rounded-xl border border-borderDark flex items-center justify-between">
+          <div>
+            <span class="font-bold text-white block">Administrator Privileges</span>
+            <span class="text-[11px] text-slate-400">Can access this admin console and manage all content</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="userFormIsAdmin" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-borderDark/60">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 rounded-xl bg-cardDark hover:bg-borderDark text-slate-300 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition">Save Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Post Add / Edit Modal -->
+  <div id="postModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden">
+    <div class="glass-card rounded-2xl w-full max-w-xl p-6 border border-borderDark max-h-[90vh] overflow-y-auto custom-scroll">
+      <div class="flex items-center justify-between mb-5 border-b border-borderDark/60 pb-3">
+        <h3 id="postModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-brand-400"></i> Edit Post / Review
+        </h3>
+        <button onclick="closePostModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="postForm" onsubmit="handleSavePost(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="editPostId">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Book Title *</label>
+            <input type="text" id="postFormTitle" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Book Author *</label>
+            <input type="text" id="postFormAuthor" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Genre *</label>
+            <select id="postFormGenre" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+              <option value="Fiction">Fiction</option>
+              <option value="Sci-Fi & Fantasy">Sci-Fi & Fantasy</option>
+              <option value="Mystery & Thriller">Mystery & Thriller</option>
+              <option value="Non-Fiction">Non-Fiction</option>
+              <option value="Classics">Classics</option>
+              <option value="Philosophy">Philosophy</option>
+              <option value="Romance">Romance</option>
+              <option value="Biography">Biography</option>
+              <option value="History">History</option>
+              <option value="Self-Help">Self-Help</option>
+              <option value="Poetry">Poetry</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Rating (0.5 to 5.0) *</label>
+            <input type="number" step="0.5" min="0.5" max="5.0" id="postFormRating" required value="5.0" class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Assign User / Author</label>
+            <select id="postFormUserId" class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+              <!-- Populated dynamically with users list -->
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Review Text *</label>
+          <textarea id="postFormText" rows="4" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Memorable Quote</label>
+          <input type="text" id="postFormQuote" placeholder="“A quote from the book...”" class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Cover Image URL</label>
+            <input type="url" id="postFormCover" placeholder="https://..." class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+          <div>
+            <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Book Store Link</label>
+            <input type="url" id="postFormLink" placeholder="https://..." class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-borderDark/60">
+          <button type="button" onclick="closePostModal()" class="px-4 py-2 rounded-xl bg-cardDark hover:bg-borderDark text-slate-300 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition">Save Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Edit Comment Modal -->
+  <div id="commentModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden">
+    <div class="glass-card rounded-2xl w-full max-w-md p-6 border border-borderDark">
+      <div class="flex items-center justify-between mb-4 border-b border-borderDark/60 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-comment-pen text-brand-400"></i> Edit Comment
+        </h3>
+        <button onclick="closeCommentModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="commentForm" onsubmit="handleSaveComment(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="editCommentId">
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 mb-1">Comment Text</label>
+          <textarea id="commentFormText" rows="4" required class="w-full px-3 py-2 rounded-xl bg-black/50 border border-borderDark focus:border-brand-500 focus:outline-none text-white"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" onclick="closeCommentModal()" class="px-4 py-2 rounded-xl bg-cardDark hover:bg-borderDark text-slate-300 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition">Update Comment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Generic Confirmation Modal -->
+  <div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-card rounded-2xl w-full max-w-sm p-6 border border-rose-500/30 text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3">
+        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+      </div>
+      <h3 id="confirmModalTitle" class="text-base font-bold text-white mb-2">Are you sure?</h3>
+      <p id="confirmModalDesc" class="text-xs text-slate-400 mb-6">This action cannot be undone and will permanently remove data.</p>
+      
+      <div class="flex items-center justify-center gap-3 text-xs">
+        <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl bg-cardDark hover:bg-borderDark text-slate-300 transition">Cancel</button>
+        <button type="button" id="confirmModalActionBtn" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold shadow-lg shadow-rose-600/30 transition">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="/admin.js"></script>
+</body>
+</html>

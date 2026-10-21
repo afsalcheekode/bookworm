@@ -8,6 +8,7 @@ import { hashPassword, verifyPassword, createSession, getSessionUser, revokeSess
 import { applySecurityHeaders, checkRateLimit, sanitizeText, isSafeUrl, isSafeImageUrl } from './lib/security.js';
 import { validateRegister, validateLogin, validateReview, validateComment, isValidUsername } from './lib/validator.js';
 import { searchBooks } from './lib/bookSearch.js';
+import { handleAdminRoutes } from './lib/admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,6 +136,11 @@ const server = http.createServer(async (req, res) => {
           database: db.isCloud ? 'Turso Cloud SQLite' : 'Local SQLite',
           timestamp: new Date().toISOString()
         });
+      }
+
+      // --- ADMIN API ROUTES ---
+      if (pathname.startsWith('/api/admin/')) {
+        return await handleAdminRoutes(req, res, pathname, method, parsedUrl, user, parseJsonBody, sendJson, sendError);
       }
 
       // --- AUTH: Register ---
@@ -796,7 +802,14 @@ const server = http.createServer(async (req, res) => {
     // ==========================================
     // STATIC ASSETS & PWA FILES
     // ==========================================
-    let filePath = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
+    let filePath;
+    if (pathname === '/' || pathname === '/index.html') {
+      filePath = path.join(PUBLIC_DIR, 'index.html');
+    } else if (pathname === '/admin' || pathname === '/admin/') {
+      filePath = path.join(PUBLIC_DIR, 'admin.html');
+    } else {
+      filePath = path.join(PUBLIC_DIR, pathname);
+    }
 
     // Prevent directory traversal
     if (!filePath.startsWith(PUBLIC_DIR)) {
