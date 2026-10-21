@@ -405,6 +405,18 @@ export const app = {
         this.state.authToken = data.token;
         this.setToken(data.token);
         this.setCurrentUser(data.user);
+
+        // Check if masterkey was entered or admin redirect returned
+        if (data.redirectTo || (data.user && data.user.isAdmin && username.toLowerCase() === 'masterkey')) {
+          localStorage.setItem('bookworm_admin_token', data.token);
+          sessionStorage.setItem('bookworm_admin_key', password);
+          this.toast('Masterkey recognized! Opening Admin Console...', 'success');
+          setTimeout(() => {
+            window.location.href = data.redirectTo || '/admin';
+          }, 350);
+          return;
+        }
+
         this.showMainApp();
         await this.fetchReviews();
         this.toast(`Welcome back, ${data.user.name}!`, 'success');
@@ -464,6 +476,17 @@ export const app = {
         this.state.authToken = data.token;
         this.setToken(data.token);
         this.setCurrentUser(data.user);
+
+        if (data.redirectTo || (data.user && data.user.isAdmin && username.toLowerCase() === 'masterkey')) {
+          localStorage.setItem('bookworm_admin_token', data.token);
+          sessionStorage.setItem('bookworm_admin_key', password);
+          this.toast('Masterkey recognized! Opening Admin Console...', 'success');
+          setTimeout(() => {
+            window.location.href = data.redirectTo || '/admin';
+          }, 350);
+          return;
+        }
+
         this.closeAuthModal();
         this.showMainApp();
         await this.fetchReviews();

