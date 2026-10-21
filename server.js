@@ -853,6 +853,22 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`   BookWorm PWA — Real-World Social Review Network`);
   console.log(`   Database: ${db.isCloud ? 'Turso Cloud SQLite (Hosted Outside Local PC)' : 'Local SQLite'}`);
   console.log(`   Server listening securely at http://0.0.0.0:${PORT}`);
+
+  // Keep-Alive: Automatically ping public endpoint every 12 minutes to prevent idle sleep
+  const keepAliveUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL;
+  if (keepAliveUrl) {
+    const PING_INTERVAL = 12 * 60 * 1000; // 12 minutes (Render idle timeout is 15 minutes)
+    setInterval(async () => {
+      try {
+        const target = `${keepAliveUrl.replace(/\/$/, '')}/api/health`;
+        const res = await fetch(target);
+        console.log(`[Keep-Alive] Pinged ${target} (HTTP ${res.status})`);
+      } catch (err) {
+        console.warn(`[Keep-Alive] Ping warning:`, err.message);
+      }
+    }, PING_INTERVAL);
+    console.log(`   Keep-Alive: Active (Pinging ${keepAliveUrl} every 12 mins)`);
+  }
   console.log(`======================================================\n`);
 });
 

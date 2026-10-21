@@ -1,0 +1,24 @@
+name: Keep App Awake
+
+on:
+  schedule:
+    # Run every 14 minutes (Render free tier spins down after 15 minutes of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping BookWorm Online Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          TARGET="${{ secrets.LIVE_APP_URL }}"
+          if [ -z "$TARGET" ]; then
+            echo "Notice: LIVE_APP_URL secret is not set yet in GitHub repository secrets."
+            echo "Please set LIVE_APP_URL to your Render URL (e.g. https://bookworm-xxxx.onrender.com) under Settings -> Secrets and variables -> Actions."
+            exit 0
+          fi
+          echo "Pinging $TARGET/api/health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET/api/health" || true)
+          echo "Received response HTTP status: $STATUS"
